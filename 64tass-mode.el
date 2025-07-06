@@ -473,6 +473,11 @@ containing its corresponding integer value."
 
 
 
+(defvar 64tass-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-b") #'64tass-insert-BASIC-header)
+    map))
+
 ;;;###autoload
 (define-derived-mode 64tass-mode
   prog-mode

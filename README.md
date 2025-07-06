@@ -10,9 +10,10 @@ Major mode for working with 64tass assembly, offering column-based editing.
 
 ## Commands and default keybindings
 
-| Binding | Command                  | Description                                          |
-|---------|--------------------------|------------------------------------------------------|
-| `<tab>` | `64tass-align-and-cycle` | Format the current line and move to the next segment |
+| Binding   | Command                      | Description                                          |
+|-----------|------------------------------|------------------------------------------------------|
+| `C-c C-b` | `64tass-insert-BASIC-header` | Insert BASIC loader stub                             |
+| `<tab>`   | `64tass-align-and-cycle`     | Format the current line and move to the next segment |
 
 ## Custom variables
 
