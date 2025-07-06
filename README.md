@@ -18,7 +18,8 @@ This repository is a monorepo containing standalone packages for common function
 can be used by other modes or users that require these features, but can not or do not want to
 depend on the full 64tass-mode.el major mode.
 
-- [`64tass-proc.el` - Utility package for interacting with/invoking `64tass`](packages/64tass-proc.el/README.md)
+- [**`64tass-proc.el`**](packages/64tass-proc.el/README.md) - Utility package for interacting with/invoking `64tass`
+- [**`flycheck-64tass.el`**](packages/flycheck-64tass.el/README.md) - Flycheck syntax checker for `64tass`.
 
 ## Commands and default keybindings
 

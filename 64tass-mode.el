@@ -2,7 +2,7 @@
 
 ;; Author: Sven Johansson <johanssons.sven@gmail.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "30.1") (64tass "0.1.0") (company-64tass "0.1.0") (flycheck-64tass "0.1.0"))
+;; Package-Requires: ((emacs "30.1") (64tass-proc "0.1.0") (company-64tass "0.1.0") (flycheck-64tass "0.1.0"))
 ;; Homepage: https://www.github.com/svjson/64tass-mode.el
 ;; Keywords: c64, Commodore 64, assembly, retro, programming
 
@@ -30,6 +30,7 @@
 (require 'cl-lib)
 (require 'dash)
 (require '64tass-proc)
+(require 'flycheck-64tass)
 
 
 ;; Custom variables
@@ -564,6 +565,9 @@ location."
   (setq-local indent-line-function '64tass-align-and-cycle)
   (setq-local 64tass-proc-on-assembly-success-function 64tass-on-assembly-success-function)
   (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
+
+  (when (featurep 'flycheck)
+    (flycheck-64tass-setup))
 
   (electric-indent-local-mode -1))
 
