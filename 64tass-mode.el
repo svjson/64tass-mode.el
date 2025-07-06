@@ -29,6 +29,7 @@
 
 (require 'cl-lib)
 (require 'dash)
+(require '64tass-proc)
 
 
 ;; Custom variables
@@ -54,6 +55,33 @@ indentation.  Left configurable to enable derived work to configure this."
   "Insert BASIC source comment before basic header."
   :type 'boolean
   :group 'languages)
+
+(defcustom 64tass-on-assembly-success-function #'64tass--on-assembly-success
+  "Callback function to execute following successful assembly using 64tass.
+
+Takes one argument - the parsed assembly output, as returned by
+`64tass-proc--parse-assembly-output'
+
+This custom variable will shadow its counter-part in 64tass-proc-el in
+tass64-mode buffers."
+  :type 'function
+  :group '64tass)
+
+(defcustom 64tass-on-assembly-error-function #'64tass--on-assembly-error
+  "Callback function to execute following assembly failure using 64tass.
+
+Takes two arguments - the parsed assembly output, as returned by
+`64tass-proc--parse-assembly-output' and the encountered error.  If multiple
+errors were encountered, the first is provided as the second argument.
+
+The full list of errors is available in the assembly-output argument, and
+the second argument is provided merely as a convenience.
+
+This custom variable will shadow its counter-part in 64tass-proc-el in
+tass64-mode buffers."
+  :type 'function
+  :group '64tass)
+
 
 
 ;; Regex constants
@@ -471,11 +499,59 @@ containing its corresponding integer value."
     (insert (concat "*=" raw-addr ))
     (newline)))
 
+
 
+;; Assembly
+
+(defun 64tass--on-assembly-success (assembly-output)
+  "Show assembly success message according to ASSEMBLY-OUTPUT.
+
+Default handler for `64tass-on-assembly-success-function'."
+  (message "Assembly finished with no errors.  Wrote: %s" (plist-get assembly-output :output-file)))
+
+(defun 64tass--on-assembly-error (assembly-output first-error)
+  "React to and handle assembly error according to ASSEMBLY-OUTPUT and FIRST-ERROR.
+
+Default handler for `64tass-on-assembly-error-function'."
+  (64tass--display-assembly-error assembly-output first-error)
+  (64tass-proc-assembly-log-other-window)
+  (64tass--go-to-assembly-error-location assembly-output first-error))
+
+(defun 64tass--display-assembly-error (assembly-output first-error)
+  "Show error assembly error message from ASSEMBLY-OUTPUT.
+
+FIRST-ERROR contains the first error encountered in the 64tass output."
+  (message (string-join
+            (append
+             (list (format "Assembly finished with errors: %s" (plist-get assembly-output :error-count))
+                   (format "%s:" (plist-get first-error :message)))
+             (plist-get first-error :source-ref))
+            "\n")))
+
+(defun 64tass--go-to-assembly-error-location (_assembly-output first-error)
+  "Show buffer containing assembly error in ASSEMBLY-OUTPUT.
+
+Opens the file containing the reported error that encountered first by 64tass -
+FIRST-ERROR - unless already open, and then moves the cursor to the error
+location."
+  (let* ((source-buffer (find-buffer-visiting (plist-get first-error :input-file))))
+    (when (buffer-live-p source-buffer)
+      (let ((window (display-buffer source-buffer)))
+        (when (window-live-p window)
+          (select-window window)
+          (goto-char (point-min))
+          (forward-line (1- (plist-get first-error :line)))
+          (beginning-of-line)
+          (forward-char (plist-get first-error :column)))))))
+
+
+
+;; 64tass-mode
 
 (defvar 64tass-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-b") #'64tass-insert-BASIC-header)
+    (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
     map))
 
 ;;;###autoload
@@ -486,6 +562,8 @@ containing its corresponding integer value."
   (set-syntax-table (make-syntax-table 64tass-mode-syntax-table))
   (setq-local font-lock-defaults '(64tass-font-lock-keywords))
   (setq-local indent-line-function '64tass-align-and-cycle)
+  (setq-local 64tass-proc-on-assembly-success-function 64tass-on-assembly-success-function)
+  (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
 
   (electric-indent-local-mode -1))
 
