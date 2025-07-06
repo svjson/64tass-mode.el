@@ -1,4 +1,4 @@
-;;; 64tass-mode.parse-line.el --- summary -*- lexical-binding: t -*-
+;;; 64tass-mode.parse-line.test.el --- summary -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Sven Johansson
 
@@ -20,7 +20,8 @@
 
 ;;; Commentary:
 
-;; commentary
+;; Tests for `64tass--parse-line', parsing a single line of 64tass syntax
+;; to a model suitable for formatting and navigation.
 
 ;;; Code:
 
@@ -193,5 +194,5 @@
                                      :begin 15
                                      :end 18)))))
 
-;;; 64tass-mode.parse-line.el ends hereA
+;;; 64tass-mode.parse-line.test.el ends hereA
 

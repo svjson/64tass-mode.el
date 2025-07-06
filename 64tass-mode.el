@@ -30,6 +30,9 @@
 (require 'cl-lib)
 (require 'dash)
 
+
+;; Custom variables
+
 (defcustom 64tass-left-margin-indent 0
   "Default level for left margin-aligned content.
 Should invariably be 0, since 64tass requires this content to have zero
@@ -53,6 +56,7 @@ indentation.  Left configurable to enable derived work to configure this."
   :group 'languages)
 
 
+;; Regex constants
 
 (defconst 64tass-6502-opcode-list '("adc" "anc" "and" "ane" "arr" "asl" "asr" "bcc" "bcs" "beq" "bit" "bmi" "bne"
                                     "bpl" "brk" "bvc" "bvs" "clc" "cld" "cli" "clv" "cmp" "cpx" "cpy" "dcp" "dec"
@@ -72,7 +76,7 @@ indentation.  Left configurable to enable derived work to configure this."
 (defconst 64tass-comment-regex "\\(;.*\\)")
 
 
-
+;; Font-locking
 
 (defconst 64tass-font-lock-keywords
   `(;; Preprocessor
@@ -121,6 +125,15 @@ indentation.  Left configurable to enable derived work to configure this."
     (,(concat "\\([[:blank:]]+" 64tass-6502-opcode-regex "\\).*\\,[[:space:]]?\\([xy]\\)")
      (2 'bold))
     ))
+
+
+;; Line type segment composition
+
+(defconst 64tass-line-type-segments
+  '((:instruction       :label :opcode :comment)
+    (:label+instruction :label :opcode :comment)
+    (:blank             :label :opcode :comment)
+    (:label             :label :comment)))
 
 
 ;; Line parsing for content-aware navigation and formatting
@@ -186,6 +199,12 @@ indentation.  Left configurable to enable derived work to configure this."
      (lambda (_)
        (list :type :unknown)))))
 
+(defun 64tass--current-line ()
+  "Get the full contents of the current line as string."
+  (buffer-substring-no-properties
+                (line-beginning-position)
+                (line-end-position)))
+
 (defun 64tass--parse-line (&optional line)
   "Classify and parse LINE, returning a plist of describing its segments.
 The segments are described by fields like :type, :opcode, :comment, etc.
@@ -193,9 +212,7 @@ The exact composition depends on :type.
 
 LINE is optional, and if omitted the full current line at point will be used."
   (when (not line)
-    (setq line (buffer-substring-no-properties
-                (line-beginning-position)
-                (line-end-position))))
+    (setq line (64tass--current-line)))
   (setq line (string-trim-right line))
   (with-temp-buffer
     (insert line)
@@ -309,7 +326,7 @@ type overrides the column configuration by example."
       (list :instr-indent instr-indent
             :comment-indent comment-indent))))
 
-(defun 64tass--resolve-local-indent-for (seg-type)
+(defun 64tass--resolve-contextual-indent-for (seg-type)
   "Resolve local indentation for SEG-TYPE.
 
 Uses `64tass--resolve-local-indentation' to find the closest preceding
@@ -326,45 +343,63 @@ SEG-TYPE can be one of `:left-margin', `:instruction', or `:comment'."
           (:instruction 64tass-instruction-column-indent)
           (:comment 64tass-comment-column-indent)))))
 
-(defun 64tass--resolve-point-context (parsed-line)
+(defun 64tass--resolve-local-indent-for (seg-type)
+  "Resolve local indentation for SEG-TYPE.
+
+Uses `64tass--resolve-local-indentation' to find the closest preceding
+line of the same type, and returns the indentation level for that type.
+
+SEG-TYPE can be one of `:left-margin', `:instruction', or `:comment'."
+  (pcase seg-type
+    (:label 0)
+    (:opcode (64tass--resolve-contextual-indent-for :instruction))
+    (:comment (64tass--resolve-contextual-indent-for :comment))))
+
+(defun 64tass--resolve-point-context (parsed-line &optional column)
   "Resolve the point context for the current line based on its parsed content.
 
 This function determines whether the point is in the left margin, instruction
 column, or comment column based on the PARSED-LINE content.
 
+COLUMN is optional and is derived from (current-column) if omitted.
+
 It returns a plist with contextual hints for next and previous contexts, which
 is used for cycling behavior."
-  (let* ((opcode (plist-get parsed-line :opcode))
-         (comment (plist-get parsed-line :comment))
-         (pt-ctx (cond
-                  ((and opcode (< (current-column)
-                                  (plist-get opcode :begin)))
-                   :left-margin)
-                  ((and opcode (< (current-column)
-                                  (or (and comment (plist-get comment :begin))
-                                      (64tass--resolve-local-indent-for :comment))))
-                   :instr-column)))
-         (next-ctx (pcase pt-ctx
-                     (:left-margin :instr-column)
-                     (:instr-column :comment-column)
-                     (:comment-column :left-margin))))
-    (list :point pt-ctx
-          :next next-ctx)))
+  (let* ((column (or column (current-column)))
+         (type (plist-get parsed-line :type))
+         (segments (alist-get type 64tass-line-type-segments))
+         (positions
+          (cl-loop for segment in segments
+                   for pos = (or (-> parsed-line
+                                     (plist-get segment)
+                                     (plist-get :begin))
+                                 (64tass--resolve-local-indent-for segment))
+                   when (numberp pos)
+                   collect (cons segment pos)))
+         (next-segments
+          (cl-find-if (lambda (pair)
+                        (< column (cdr pair)))
+                      positions))
+         (next (or (car next-segments)
+                   (car segments)))
+         (current (let ((prev-index (- (cl-position next segments :test #'equal) 1)))
+                    (if (= prev-index -1)
+                        (car (last segments))
+                      (nth prev-index segments)))))
+    (message "%s" positions)
+    (message "%s" (list :point column :current current :next next))
+    (list :point column :current current :next next)))
 
-(defun 64tass-indent-or-cycle ()
+(defun 64tass-align-and-cycle ()
   "Indent/format the current line as needed and cycle through indentation contexts."
   (interactive)
   (let* ((parsed-line (64tass--parse-line))
          (point-context (64tass--resolve-point-context parsed-line)))
     (64tass-align-current-line)
     (let* ((reparsed (64tass--parse-line))
-           (target-col (or (pcase (plist-get point-context :next)
-                             (:instr-column
-                              (-> reparsed (plist-get :opcode) (plist-get :begin)))
-                             (:comment-column
-                              (or (-> reparsed (plist-get :comment) (plist-get :begin))
-                                  (64tass--resolve-local-indent-for :comment))))
-                           0))
+           (next-segment (plist-get point-context :next))
+           (target-col (or (-> reparsed (plist-get next-segment) (plist-get :begin))
+                           (64tass--resolve-local-indent-for next-segment)))
            (line-len (save-excursion (end-of-line) (current-column))))
       (when (> target-col line-len)
         (move-end-of-line nil)
@@ -413,9 +448,7 @@ containing its corresponding integer value."
     (newline)
     (newline)
     (insert (concat "*=" raw-addr ))
-    (newline)
-    ;;(paw64-indent-for-tab)
-    ))
+    (newline)))
 
 
 
@@ -426,7 +459,7 @@ containing its corresponding integer value."
   "Major mode for 6502/6510 assembly with 64tass."
   (set-syntax-table (make-syntax-table 64tass-mode-syntax-table))
   (setq-local font-lock-defaults '(64tass-font-lock-keywords))
-  (setq-local indent-line-function '64tass-indent-or-cycle)
+  (setq-local indent-line-function '64tass-align-and-cycle)
 
   (electric-indent-local-mode -1))
 
