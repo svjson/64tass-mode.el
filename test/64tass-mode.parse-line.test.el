@@ -50,23 +50,22 @@
   (should (equal (64tass--parse-line "   \t   ")
                  (list :type :blank))))
 
-(ert-deftest parse-line--label ()
+(ert-deftest parse-line--label-standalone ()
   (should (equal (64tass--parse-line "hic_sunt_dracones:")
                  (list :type :label
-                       :label (list :value "hic_sunt_dracones"
-                                    :begin 0
-                                    :end 17)))))
+                       :label-standalone (list :value "hic_sunt_dracones"
+                                               :begin 0
+                                               :end 17)))))
 
 (ert-deftest parse-line--label--with-comment ()
   (should (equal (64tass--parse-line "hic_sunt_dracones:     ;; True story")
                  (list :type :label
-                       :label (list :value "hic_sunt_dracones"
-                                    :begin 0
-                                    :end 17)
+                       :label-standalone (list :value "hic_sunt_dracones"
+                                               :begin 0
+                                               :end 17)
                        :comment (list :value ";; True story"
                                       :begin 23
                                       :end 36)))))
-
 
 (ert-deftest parse-line--assembly-address ()
   (should (equal (64tass--parse-line "*=$0801")

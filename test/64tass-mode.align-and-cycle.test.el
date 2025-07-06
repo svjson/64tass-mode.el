@@ -54,7 +54,6 @@
      (should (equal (current-column) 0)))))
 
 (ert-deftest align-and-cycle--instruction-with-comment--formats-to-precedent ()
-  (message "Before macro: %s" (time-stamp-string))
   (with-cursor-in-64tass-mode-buffer
    ((64tass-left-margin-indent . 0)
     (64tass-instruction-column-indent . 16)

@@ -40,12 +40,12 @@ indentation.  Left configurable to enable derived work to configure this."
   :type 'integer
   :group '64tass)
 
-(defcustom 64tass-instruction-column-indent 16
+(defcustom 64tass-instruction-column-indent 20
   "Default level of indentation for assembly instructions."
   :type 'integer
   :group '64tass)
 
-(defcustom 64tass-comment-column-indent 30
+(defcustom 64tass-comment-column-indent 40
   "Default level of indentation for post-instruction comments."
   :type 'integer
   :group '64tass)
@@ -129,16 +129,24 @@ indentation.  Left configurable to enable derived work to configure this."
 
 ;; Line type segment composition
 
-(defconst 64tass-line-type-segments
-  '((:instruction       :label :opcode :comment)
-    (:label+instruction :label :opcode :comment)
+(defconst 64tass-line-type-cycle-segments
+  '((:assembly-address  :address :comment)
     (:blank             :label :opcode :comment)
-    (:label             :label :comment)))
+    (:directive         :directive :comment)
+    (:instruction       :label :opcode :comment)
+    (:label             :label-standalone :comment)
+    (:label+instruction :label :opcode :comment)))
+
+(defconst 64tass-segment-composition
+  '((:opcode               :opcode " " :operand)
+    (:directive            :directive " " :args)
+    (:label-standalone     :label-standalone ":")
+    (:address              -2 "*=" :address)))
 
 
 ;; Line parsing for content-aware navigation and formatting
 
-(defconst 64tass--line-classifiers
+ (defconst 64tass--line-classifiers
   '((:comment
      "^\\s-*\\(;.*\\)$"
      (lambda (str)
@@ -152,7 +160,7 @@ indentation.  Left configurable to enable derived work to configure this."
      "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\):\\s-*$"
      (lambda (str)
        (list :type :label
-             :label (64tass--span 1 str))))
+             :label-standalone (64tass--span 1 str))))
 
     (:assembly-address
      "^\\s-*\\(\\*\\)=\\s-*\\([$%]?[0-9a-fA-F]+\\)"
@@ -264,40 +272,46 @@ used for alignment."
   (interactive)
   (save-excursion
     (let* ((line (buffer-substring (line-beginning-position) (line-end-position)))
-           (local-indentation (64tass--resolve-local-indentation))
-           (instr-column-indent (if prefer-default
-                                    64tass-instruction-column-indent
-                                  (or (plist-get local-indentation :instr-indent)
-                                      64tass-instruction-column-indent)))
-           (comment-column-indent (if prefer-default
-                                    64tass-comment-column-indent
-                                  (or (plist-get local-indentation :comment-indent)
-                                      64tass-comment-column-indent)))
-           (parsed (64tass--parse-line line))
-           (label (plist-get parsed :label))
-           (opcode (plist-get parsed :opcode))
-           (operand (plist-get parsed :operand))
-           (comment (plist-get parsed :comment)))
+           (parsed-line (64tass--parse-line line))
+           (local-indentation (if prefer-default
+                                  (list :instr-indent 64tass-instruction-column-indent
+                                        :comment-indent 64tass-comment-column-indent)
+                                (64tass--resolve-local-indentation)))
+           (segments (alist-get (plist-get parsed-line :type) 64tass-line-type-cycle-segments))
+           (current-format (cl-loop for segment in segments
+                                    for pos = (-> parsed-line
+                                                  (plist-get segment)
+                                                  (plist-get :begin))
+                                    when (numberp pos)
+                                    collect (cons segment pos)))
+           (target-format (cl-mapcar (lambda (seg)
+                                       (cons (car seg)
+                                             (64tass--resolve-local-indent-for
+                                              (car seg)
+                                              local-indentation)))
+                                     current-format)))
 
-      (delete-region (line-beginning-position) (line-end-position))
+      (unless (equal current-format target-format)
 
-      (when label
-        (insert (plist-get label :value))
-        (insert " ")) ;; spacing after label
+        (delete-region (line-beginning-position) (line-end-position))
 
-      (when opcode
-        (indent-to instr-column-indent)
-        (insert (plist-get opcode :value)))
+        (mapc (lambda (seg)
+                (indent-to (cdr seg))
+                (when (> (current-column) (cdr seg))
+                  (insert " "))
+                (if-let ((seg-comp (alist-get (car seg) 64tass-segment-composition)))
+                    (dolist (part seg-comp)
+                      (cond
+                       ((stringp part)
+                        (insert part))
 
-      (when operand
-        (insert " ")
-        (insert (plist-get operand :value)))
+                       ((integer-or-marker-p part)
+                        (kill-backward-chars 2))
 
-      (when comment
-        (let ((col (current-column)))
-          (when (< col comment-column-indent)
-            (insert (make-string (- comment-column-indent col) ?\s)))
-          (insert (plist-get comment :value)))))))
+                       (t
+                        (insert (-> parsed-line (plist-get part) (plist-get :value))))))
+                  (insert (-> parsed-line (plist-get (car seg)) (plist-get :value)))))
+              target-format)))))
 
 (defun 64tass--resolve-local-indentation ()
   "Resolve local indentation settings for the current line.
@@ -326,14 +340,15 @@ type overrides the column configuration by example."
       (list :instr-indent instr-indent
             :comment-indent comment-indent))))
 
-(defun 64tass--resolve-contextual-indent-for (seg-type)
+(defun 64tass--resolve-contextual-indent-for (seg-type &optional local-indentation)
   "Resolve local indentation for SEG-TYPE.
 
 Uses `64tass--resolve-local-indentation' to find the closest preceding
 line of the same type, and returns the indentation level for that type.
+Or, optionally uses the pre-computed LOCAL-INDENTATION, if provided.
 
 SEG-TYPE can be one of `:left-margin', `:instruction', or `:comment'."
-  (let* ((local-indent (64tass--resolve-local-indentation))
+  (let* ((local-indent (or local-indentation (64tass--resolve-local-indentation)))
          (resolved (pcase seg-type
                      (:instruction (plist-get local-indent :instr-indent))
                      (:comment (plist-get local-indent :comment-indent)))))
@@ -343,17 +358,24 @@ SEG-TYPE can be one of `:left-margin', `:instruction', or `:comment'."
           (:instruction 64tass-instruction-column-indent)
           (:comment 64tass-comment-column-indent)))))
 
-(defun 64tass--resolve-local-indent-for (seg-type)
+(defun 64tass--resolve-local-indent-for (seg-type &optional local-indentation)
   "Resolve local indentation for SEG-TYPE.
 
 Uses `64tass--resolve-local-indentation' to find the closest preceding
 line of the same type, and returns the indentation level for that type.
 
-SEG-TYPE can be one of `:left-margin', `:instruction', or `:comment'."
+SEG-TYPE can be one of the segment types defined by
+`64tass-line-type-cycle-segments`.
+
+LOCAL-INDENTATION can optionally be provided to avoid repeated traversing
+for segment types that require resolveing contextual intendtation."
   (pcase seg-type
     (:label 0)
-    (:opcode (64tass--resolve-contextual-indent-for :instruction))
-    (:comment (64tass--resolve-contextual-indent-for :comment))))
+    (:label-standalone 0)
+    (:directive 0)
+    (:address 2)
+    (:opcode (64tass--resolve-contextual-indent-for :instruction local-indentation))
+    (:comment (64tass--resolve-contextual-indent-for :comment local-indentation))))
 
 (defun 64tass--resolve-point-context (parsed-line &optional column)
   "Resolve the point context for the current line based on its parsed content.
@@ -367,7 +389,7 @@ It returns a plist with contextual hints for next and previous contexts, which
 is used for cycling behavior."
   (let* ((column (or column (current-column)))
          (type (plist-get parsed-line :type))
-         (segments (alist-get type 64tass-line-type-segments))
+         (segments (alist-get type 64tass-line-type-cycle-segments))
          (positions
           (cl-loop for segment in segments
                    for pos = (or (-> parsed-line
@@ -386,8 +408,6 @@ is used for cycling behavior."
                     (if (= prev-index -1)
                         (car (last segments))
                       (nth prev-index segments)))))
-    (message "%s" positions)
-    (message "%s" (list :point column :current current :next next))
     (list :point column :current current :next next)))
 
 (defun 64tass-align-and-cycle ()
@@ -401,9 +421,10 @@ is used for cycling behavior."
            (target-col (or (-> reparsed (plist-get next-segment) (plist-get :begin))
                            (64tass--resolve-local-indent-for next-segment)))
            (line-len (save-excursion (end-of-line) (current-column))))
+      (delete-trailing-whitespace (line-beginning-position) (line-end-position))
       (when (> target-col line-len)
         (move-end-of-line nil)
-        (insert (make-string (- target-col line-len) ?\s)))
+        (indent-to target-col))
       (move-to-column target-col))))
 
 
