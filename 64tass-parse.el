@@ -79,7 +79,7 @@
              :value (64tass--span 2 str))))
 
     (:directive
-     "^\\s-*\\(\\.[a-z]+\\)\\s-+\\(.*\\)"
+     "^\\s-*\\(\\.[a-z]+\\)\\s-+\\([^;]*\\)"
      (lambda (str)
        (list :type :directive
              :directive (64tass--span 1 str)
@@ -111,6 +111,29 @@
        (list :type :unknown)))))
 
 
+(defun 64tass--comment-start-index (line)
+  "Return position of comment semicolon in LINE, ignoring strings and chars."
+  (let ((i 0)
+        (len (length line))
+        (in-string nil)
+        (in-char nil))
+    (catch 'found
+      (while (< i len)
+        (let ((c (aref line i)))
+          (cond
+           ((and (not in-string) (not in-char) (eq c ?\"))
+            (setq in-string t))
+           ((and in-string (eq c ?\"))
+            (setq in-string nil))
+           ((and (not in-string) (not in-char) (eq c ?\'))
+            (setq in-char t))
+           ((and in-char (eq c ?\'))
+            (setq in-char nil))
+           ((and (not in-string) (not in-char) (eq c ?\;))
+            (throw 'found i))))
+        (setq i (1+ i)))
+      nil)))
+
 (defun 64tass--parse-line (&optional line)
   "Classify and parse LINE, returning a plist of describing its segments.
 The segments are described by fields like :type, :opcode, :comment, etc.
@@ -124,15 +147,12 @@ LINE is optional, and if omitted the full current line at point will be used."
     (insert line)
     (goto-char (point-min))
     (let* ((code line)
-           (comment nil)
-           (comment-start (when (string-match
-                                 "^\\s-*\\(?:[^;[:space:]]+\\s-*\\)+\\(;.*\\)"
-                                 line)
-                            (match-beginning 1))))
-      (when comment-start
-        (setq comment (list :value (match-string 1 line)
+           (comment nil))
+      (when-let* ((comment-start (64tass--comment-start-index line))
+                  (_ (> comment-start 0)))
+        (setq comment (list :value (substring line comment-start)
                             :begin comment-start
-                            :end (match-end 1)))
+                            :end (length line)))
         (setq code (string-trim-right (substring line 0 comment-start))))
       (cl-loop for (_type regex parser) in 64tass--line-classifiers
                when (string-match regex code)

@@ -37,7 +37,7 @@
 
 (ert-deftest parse-line--comment-only--indented ()
   (should (equal (64tass--parse-line "     ;; I ate the last muffin")
-                 (list :type :comment
+                 (list :type :blank
                        :comment (list :value ";; I ate the last muffin"
                                       :begin 5
                                       :end 29)))))
