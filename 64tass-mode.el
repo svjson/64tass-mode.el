@@ -458,9 +458,7 @@ location."
   (setq-local indent-tabs-mode nil)
 
   (when (featurep 'flycheck)
-    (flycheck-64tass-setup))
-
-  (electric-indent-local-mode -1))
+    (flycheck-64tass-setup)))
 
 
 (provide '64tass-mode)
