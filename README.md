@@ -23,11 +23,13 @@ depend on the full 64tass-mode.el major mode.
 
 ## Commands and default keybindings
 
-| Binding   | Command                      | Description                                          |
-|-----------|------------------------------|------------------------------------------------------|
-| `C-c C-b` | `64tass-insert-BASIC-header` | Insert BASIC loader stub                             |
-| `C-c C-c` | `64tass-assemble-buffer`     | Invoke `64tass` to assemble the current buffer       |
-| `<tab>`   | `64tass-align-and-cycle`     | Format the current line and move to the next segment |
+| Binding     | Command                       | Description                                             |
+|-------------|-------------------------------|---------------------------------------------------------|
+| `C-c C-b`   | `64tass-insert-BASIC-header`  | Insert BASIC loader stub                                |
+| `C-c C-c`   | `64tass-assemble-buffer`      | Invoke `64tass` to assemble the current buffer          |
+| `<tab>`     | `64tass-align-and-cycle`      | Format the current line and move to the next segment    |
+| `<backtab>` | `64tass-align-and-cycle-left` | Format the current line and move to the prevous segment |
+
 
 ## Custom variables
 

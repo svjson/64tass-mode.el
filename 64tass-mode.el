@@ -318,35 +318,43 @@ is used for cycling behavior."
                                  (64tass--resolve-local-indent-for segment))
                    when (numberp pos)
                    collect (cons segment pos)))
-         (next-segments
-          (cl-find-if (lambda (pair)
-                        (< column (cdr pair)))
-                      positions))
-         (next (or (car next-segments)
-                   (car segments)))
-         (current (let ((prev-index (- (cl-position next segments :test #'equal) 1)))
-                    (if (= prev-index -1)
-                        (car (last segments))
-                      (nth prev-index segments)))))
-    (list :point column :current current :next next)))
+         (segment-count (length segments))
+         (current-index
+          (or (cl-find-if (lambda (i)
+                            (>= column (cdr (nth i positions))))
+                          (number-sequence (1- segment-count) 0 -1))
+              0))
+         (previous-index (mod (- current-index 1) segment-count))
+         (next-index     (mod (+ current-index 1) segment-count)))
+    (list :point column
+          :previous (nth previous-index segments)
+          :current (nth current-index segments)
+          :next (nth next-index segments))))
 
 
-(defun 64tass-align-and-cycle ()
-  "Indent/format the current line as needed and cycle through indentation contexts."
+(defun 64tass-align-and-cycle (&optional dir)
+  "Indent/format the current line as needed and cycle through indentation contexts.
+
+Cycles right through the line segments, unless -1 is provided as a value for DIR."
   (interactive)
   (let* ((parsed-line (64tass--parse-line))
          (point-context (64tass--resolve-point-context parsed-line)))
     (64tass-align-current-line)
     (let* ((reparsed (64tass--parse-line))
-           (next-segment (plist-get point-context :next))
-           (target-col (or (-> reparsed (plist-get next-segment) (plist-get :begin))
-                           (64tass--resolve-local-indent-for next-segment)))
+           (target-segment (plist-get point-context (if (equal -1 dir) :previous :next)))
+           (target-col (or (-> reparsed (plist-get target-segment) (plist-get :begin))
+                           (64tass--resolve-local-indent-for target-segment)))
            (line-len (save-excursion (end-of-line) (current-column))))
       (delete-trailing-whitespace (line-beginning-position) (line-end-position))
       (when (> target-col line-len)
         (move-end-of-line nil)
         (indent-to target-col))
       (move-to-column target-col))))
+
+(defun 64tass-align-and-cycle-left ()
+  "Indent/format the current line as needed and cycle, leftwards, through contexts."
+  (interactive)
+  (64tass-align-and-cycle -1))
 
 
 
@@ -432,6 +440,7 @@ location."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-b") #'64tass-insert-BASIC-header)
     (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
+    (define-key map (kbd "<backtab>") #'64tass-align-and-cycle-left)
     map))
 
 ;;;###autoload
