@@ -31,6 +31,7 @@
 (require 'dash)
 (require '64tass-common)
 (require '64tass-parse)
+(require '64tass-xref)
 (require '64tass-proc)
 (require 'flycheck-64tass)
 
@@ -437,6 +438,8 @@ location."
   (setq-local indent-line-function '64tass-align-and-cycle)
   (setq-local 64tass-proc-on-assembly-success-function 64tass-on-assembly-success-function)
   (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
+
+  (add-hook 'xref-backend-functions #'64tass-xref-backend nil t)
 
   (when (featurep 'flycheck)
     (flycheck-64tass-setup))
