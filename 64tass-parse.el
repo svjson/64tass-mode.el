@@ -35,8 +35,7 @@
     (:blank             :label :opcode :comment)
     (:directive         :directive :comment)
     (:instruction       :label :opcode :comment)
-    (:label             :label-standalone :comment)
-    (:label+instruction :label :opcode :comment)))
+    (:label             :label-standalone :comment)))
 
 
 (defconst 64tass-segment-composition
@@ -85,24 +84,33 @@
              :directive (64tass--span 1 str)
              :args (64tass--span 2 str))))
 
-    (:label+instruction
-     "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-+\\([a-z]\\{3\\}\\)\\(?:\\s-+\\(.*\\)\\)?\\s-*$"
-     (lambda (str)
-       (let ((parsed (list :type :label+instruction
-                           :label (64tass--span 1 str)
-                           :opcode (64tass--span 2 str))))
-         (if (match-beginning 3)
-             (plist-put parsed :operand (64tass--span 3 str))
-           parsed))))
-
+    ;; Instruction: label + opcode [+ operand]
     (:instruction
-     "^\\s-*\\([a-z]\\{3\\}\\)\\(?:\\s-+\\(.*\\)\\)?\\s-*$"
+     "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-+\\([a-zA-Z]\\{1,3\\}\\)\\(?:\\s-+\\(.*\\)\\)?\\s-*$"
      (lambda (str)
        (let ((parsed (list :type :instruction
-                           :opcode (64tass--span 1 str))))
-         (if (match-beginning 2)
-             (plist-put parsed :operand (64tass--span 2 str))
-           parsed))))
+                           :label   (64tass--span 1 str)
+                           :opcode  (64tass--span 2 str))))
+         (when (match-beginning 3)
+           (setq parsed (plist-put parsed :operand (64tass--span 3 str))))
+         parsed)))
+
+    ;; Instruction: opcode [+ operand]
+    (:instruction
+     "^\\s-*\\([a-zA-Z]\\{1,3\\}\\)\\(?:\\s-+\\(.*\\)\\)?\\s-*$"
+     (lambda (str)
+       (let ((parsed (list :type :instruction
+                           :opcode  (64tass--span 1 str))))
+         (when (match-beginning 2)
+           (setq parsed (plist-put parsed :operand (64tass--span 2 str))))
+         parsed)))
+
+    ;; Instruction: label only (not ending in :, and thus an :instruction line)
+    (:instruction
+     "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*$"
+     (lambda (str)
+       (list :type :instruction
+             :label (64tass--span 1 str))))
 
     ;; fallback
     (:unknown

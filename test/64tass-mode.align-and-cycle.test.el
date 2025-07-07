@@ -103,4 +103,24 @@
    (should (equal (current-column) 0))))
 
 
+(ert-deftest align-and-cycle--inline-label-typed--cycle-to-instruction ()
+  (with-cursor-in-64tass-mode-buffer
+   ((64tass-left-margin-indent . 0)
+    (64tass-instruction-column-indent . 16)
+    (64tass-comment-column-indent . 30))
+   "*=$0810
+
+mainloop|"
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "mainloop        "))
+   (should (equal (current-column) 16))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "mainloop                      "))
+   (should (equal (current-column) 30))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "mainloop"))
+   (should (equal (current-column) 0))))
+
 ;;; 64tass-mode.align-and-cycle.test.el ends here

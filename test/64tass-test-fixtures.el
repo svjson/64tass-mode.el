@@ -46,11 +46,11 @@ Enable `64tass-mode`, then run BODY."
              (goto-char (point-min))
              (when (search-forward "|" nil t)
                (delete-char -1))
-             ,@body)
+             ,@body))
        ;; Restore original settings
        ,@(mapcar (lambda (pair)
                    `(setf ,(car pair) (cdr (assoc ',(car pair) original-settings))))
-                 settings)))))
+                 settings))))
 
 (provide '64tass-test-fixtures)
 

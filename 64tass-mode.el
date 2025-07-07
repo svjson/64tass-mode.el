@@ -247,7 +247,7 @@ type overrides the column configuration by example."
                (type (plist-get line :type))
                (opcode (plist-get line :opcode))
                (comment (plist-get line :comment)))
-          (when (member type '(:instruction :label+instruction))
+          (when (eq type :instruction)
             (setq instr-indent (plist-get opcode :begin))
             (when comment
               (setq comment-indent (plist-get comment :begin))))

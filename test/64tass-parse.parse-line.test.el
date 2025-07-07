@@ -143,7 +143,7 @@
 
 (ert-deftest parse-line--label+instruction ()
   (should (equal (64tass--parse-line "mainloop       lda #$ff")
-                 (list :type :label+instruction
+                 (list :type :instruction
                        :label (list :value "mainloop"
                                     :begin 0
                                     :end 8)
@@ -156,7 +156,7 @@
 
 (ert-deftest parse-line--label+instruction--no-operand ()
   (should (equal (64tass--parse-line "mainloop       inx")
-                 (list :type :label+instruction
+                 (list :type :instruction
                        :label (list :value "mainloop"
                                     :begin 0
                                     :end 8)
@@ -193,5 +193,5 @@
                                      :begin 15
                                      :end 18)))))
 
-;;; 64tass-mode.parse-line.test.el ends hereA
+;;; 64tass-parse.parse-line.test.el ends here
 

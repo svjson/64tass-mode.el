@@ -44,26 +44,32 @@
                                            :end 24))))
      (should (equal (64tass--resolve-point-context parsed-line 0)
                     (list :point 0
+                          :previous :comment
                           :current :label
                           :next :opcode)))
      (should (equal (64tass--resolve-point-context parsed-line 4)
                     (list :point 4
+                          :previous :comment
                           :current :label
                           :next :opcode)))
      (should (equal (64tass--resolve-point-context parsed-line 16)
                     (list :point 16
+                          :previous :label
                           :current :opcode
                           :next :comment)))
      (should (equal (64tass--resolve-point-context parsed-line 18)
                     (list :point 18
+                          :previous :label
                           :current :opcode
                           :next :comment)))
      (should (equal (64tass--resolve-point-context parsed-line 30)
                     (list :point 30
+                          :previous :opcode
                           :current :comment
                           :next :label)))
      (should (equal (64tass--resolve-point-context parsed-line 35)
                     (list :point 35
+                          :previous :opcode
                           :current :comment
                           :next :label))))))
 
