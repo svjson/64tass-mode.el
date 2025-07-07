@@ -29,6 +29,8 @@
 
 (require 'cl-lib)
 (require 'dash)
+(require '64tass-common)
+(require '64tass-parse)
 (require '64tass-proc)
 (require 'flycheck-64tass)
 
@@ -42,20 +44,24 @@ indentation.  Left configurable to enable derived work to configure this."
   :type 'integer
   :group '64tass)
 
+
 (defcustom 64tass-instruction-column-indent 20
   "Default level of indentation for assembly instructions."
   :type 'integer
   :group '64tass)
+
 
 (defcustom 64tass-comment-column-indent 40
   "Default level of indentation for post-instruction comments."
   :type 'integer
   :group '64tass)
 
+
 (defcustom 64tass-insert-basic-header-comment t
   "Insert BASIC source comment before basic header."
   :type 'boolean
   :group 'languages)
+
 
 (defcustom 64tass-on-assembly-success-function #'64tass--on-assembly-success
   "Callback function to execute following successful assembly using 64tass.
@@ -67,6 +73,7 @@ This custom variable will shadow its counter-part in 64tass-proc-el in
 tass64-mode buffers."
   :type 'function
   :group '64tass)
+
 
 (defcustom 64tass-on-assembly-error-function #'64tass--on-assembly-error
   "Callback function to execute following assembly failure using 64tass.
@@ -155,133 +162,6 @@ tass64-mode buffers."
      (2 'bold))
     ))
 
-
-;; Line type segment composition
-
-(defconst 64tass-line-type-cycle-segments
-  '((:assembly-address  :address :comment)
-    (:blank             :label :opcode :comment)
-    (:directive         :directive :comment)
-    (:instruction       :label :opcode :comment)
-    (:label             :label-standalone :comment)
-    (:label+instruction :label :opcode :comment)))
-
-(defconst 64tass-segment-composition
-  '((:opcode               :opcode " " :operand)
-    (:directive            :directive " " :args)
-    (:label-standalone     :label-standalone ":")
-    (:address              -2 "*=" :address)))
-
-
-;; Line parsing for content-aware navigation and formatting
-
- (defconst 64tass--line-classifiers
-  '((:comment
-     "^\\s-*\\(;.*\\)$"
-     (lambda (str)
-       (list :type :comment :comment (64tass--span 1 str))))
-
-    (:blank
-     "^\\s-*$"
-     (lambda (_) (list :type :blank)))
-
-    (:label
-     "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\):\\s-*$"
-     (lambda (str)
-       (list :type :label
-             :label-standalone (64tass--span 1 str))))
-
-    (:assembly-address
-     "^\\s-*\\(\\*\\)=\\s-*\\([$%]?[0-9a-fA-F]+\\)"
-     (lambda (str)
-       (list :type :assembly-address
-             :address (64tass--span 2 str))))
-
-    (:constant
-     "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*=\\s-*\\(.*\\)"
-     (lambda (str)
-       (list :type :constant
-             :name (64tass--span 1 str)
-             :value (64tass--span 2 str))))
-
-    (:directive
-     "^\\s-*\\(\\.[a-z]+\\)\\s-+\\(.*\\)"
-     (lambda (str)
-       (list :type :directive
-             :directive (64tass--span 1 str)
-             :args (64tass--span 2 str))))
-
-    (:label+instruction
-     "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-+\\([a-z]\\{3\\}\\)\\(?:\\s-+\\(.*\\)\\)?\\s-*$"
-     (lambda (str)
-       (let ((parsed (list :type :label+instruction
-                           :label (64tass--span 1 str)
-                           :opcode (64tass--span 2 str))))
-         (if (match-beginning 3)
-             (plist-put parsed :operand (64tass--span 3 str))
-           parsed))))
-
-    (:instruction
-     "^\\s-*\\([a-z]\\{3\\}\\)\\(?:\\s-+\\(.*\\)\\)?\\s-*$"
-     (lambda (str)
-       (let ((parsed (list :type :instruction
-                           :opcode (64tass--span 1 str))))
-         (if (match-beginning 2)
-             (plist-put parsed :operand (64tass--span 2 str))
-           parsed))))
-
-    ;; fallback
-    (:unknown
-     ".*"
-     (lambda (_)
-       (list :type :unknown)))))
-
-(defun 64tass--current-line ()
-  "Get the full contents of the current line as string."
-  (buffer-substring-no-properties
-                (line-beginning-position)
-                (line-end-position)))
-
-(defun 64tass--parse-line (&optional line)
-  "Classify and parse LINE, returning a plist of describing its segments.
-The segments are described by fields like :type, :opcode, :comment, etc.
-The exact composition depends on :type.
-
-LINE is optional, and if omitted the full current line at point will be used."
-  (when (not line)
-    (setq line (64tass--current-line)))
-  (setq line (string-trim-right line))
-  (with-temp-buffer
-    (insert line)
-    (goto-char (point-min))
-    (let* ((code line)
-           (comment nil)
-           (comment-start (when (string-match
-                                 "^\\s-*\\(?:[^;[:space:]]+\\s-*\\)+\\(;.*\\)"
-                                 line)
-                            (match-beginning 1))))
-      (when comment-start
-        (setq comment (list :value (match-string 1 line)
-                            :begin comment-start
-                            :end (match-end 1)))
-        (setq code (string-trim-right (substring line 0 comment-start))))
-      (cl-loop for (_type regex parser) in 64tass--line-classifiers
-               when (string-match regex code)
-               return (let ((parsed (funcall parser code)))
-                        (if comment
-                            (plist-put parsed :comment comment)
-                          parsed))))))
-
-
-(defun 64tass--span (n str)
-  "Return a plist of :value, :begin, :end for match group N of STR.
-
-Used by 64tass--parse-line to extract matched groups as segments from
-a matched line."
-  (when (match-beginning n)
-    (list :value (match-string n str)
-          :begin (match-beginning n)
-          :end (match-end n))))
 
 
 ;; Formatting and tab behavior
@@ -342,6 +222,7 @@ used for alignment."
                   (insert (-> parsed-line (plist-get (car seg)) (plist-get :value)))))
               target-format)))))
 
+
 (defun 64tass--resolve-local-indentation ()
   "Resolve local indentation settings for the current line.
 
@@ -369,6 +250,7 @@ type overrides the column configuration by example."
       (list :instr-indent instr-indent
             :comment-indent comment-indent))))
 
+
 (defun 64tass--resolve-contextual-indent-for (seg-type &optional local-indentation)
   "Resolve local indentation for SEG-TYPE.
 
@@ -386,6 +268,7 @@ SEG-TYPE can be one of `:left-margin', `:instruction', or `:comment'."
           (:left-margin 0)
           (:instruction 64tass-instruction-column-indent)
           (:comment 64tass-comment-column-indent)))))
+
 
 (defun 64tass--resolve-local-indent-for (seg-type &optional local-indentation)
   "Resolve local indentation for SEG-TYPE.
@@ -405,6 +288,7 @@ for segment types that require resolveing contextual intendtation."
     (:address 2)
     (:opcode (64tass--resolve-contextual-indent-for :instruction local-indentation))
     (:comment (64tass--resolve-contextual-indent-for :comment local-indentation))))
+
 
 (defun 64tass--resolve-point-context (parsed-line &optional column)
   "Resolve the point context for the current line based on its parsed content.
@@ -439,6 +323,7 @@ is used for cycling behavior."
                       (nth prev-index segments)))))
     (list :point column :current current :next next)))
 
+
 (defun 64tass-align-and-cycle ()
   "Indent/format the current line as needed and cycle through indentation contexts."
   (interactive)
@@ -455,19 +340,6 @@ is used for cycling behavior."
         (move-end-of-line nil)
         (indent-to target-col))
       (move-to-column target-col))))
-
-
-
-
-(defun 64tass-to-decimal-string (input)
-  "Convert an INPUT hex string to decimal string.
-A string representation of hexadecimal number will be converted a string
-containing its corresponding integer value."
-  (let (;;(hex (string-match "\\$[[:digit:]]+" input))
-        (dec (string-match "[[:digit:]]+" input)))
-    (if (= dec 0)
-        input
-      (number-to-string (string-to-number (substring input 1) 16)))))
 
 
 
