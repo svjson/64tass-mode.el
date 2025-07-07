@@ -103,6 +103,4 @@
    (should (equal (current-column) 0))))
 
 
-(alist-get :label+instruction 64tass-line-type-segments)
-
 ;;; 64tass-mode.align-and-cycle.test.el ends here

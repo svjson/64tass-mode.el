@@ -33,7 +33,13 @@
 (require '64tass-parse)
 (require '64tass-xref)
 (require '64tass-proc)
-(require 'flycheck-64tass)
+
+(condition-case err
+    (progn (require 'flycheck)
+           (require 'flycheck-64tass))
+  (file-missing
+   (message "Flycheck not found (optional): %s" (cadr err))))
+
 
 
 ;; Custom variables
@@ -440,6 +446,7 @@ location."
   (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
 
   (add-hook 'xref-backend-functions #'64tass-xref-backend nil t)
+  (setq-local indent-tabs-mode nil)
 
   (when (featurep 'flycheck)
     (flycheck-64tass-setup))

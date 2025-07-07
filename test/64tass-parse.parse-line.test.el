@@ -104,7 +104,7 @@
                                     :begin 13
                                     :end 16)))))
 
-(ert-deftest parse-line--constant--no-spacing ()
+(ert-deftest parse-line--constant--no-spacing--with-comment ()
   (should (equal (64tass--parse-line "myconstant=$04    ;; Very important")
                  (list :type :constant
                        :name (list :value "myconstant"
