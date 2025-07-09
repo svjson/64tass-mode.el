@@ -412,6 +412,26 @@ for DIR."
      (t
       (newline-and-indent)))))
 
+(defun 64tass-cycle-number-at-point ()
+  "Cycle the number format of the value at point.
+
+Cycles in the order of hex -> decimal -> binary,
+e.g, $01 -> 1 -> %00000001"
+  (interactive)
+  (let* ((bounds (bounds-of-thing-at-point 'symbol))
+         (numstr (thing-at-point 'symbol t))
+         (num (64tass-parse-number numstr))
+         (start (car bounds))
+         (end (cdr bounds)))
+    (cond
+     ((string-match "^\\([0-9]+\\)$" numstr)
+      (64tass--replace-region start end (64tass-format-number num :hex)))
+
+     ((string-match "^\\$\\([0-9a-fA-F]+\\)" numstr)
+      (64tass--replace-region start end (64tass-format-number num :bin)))
+
+     ((string-match "^%\\([01]+\\)" numstr)
+      (64tass--replace-region start end (64tass-format-number num :dec))))))
 
 
 ;; Assembly
@@ -476,6 +496,7 @@ location."
     (define-key map (kbd "C-c C-b") #'64tass-insert-BASIC-header)
     (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
     (define-key map (kbd "C-c C-e") #'64tass-assemble-and-launch)
+    (define-key map (kbd "C-c C-n") #'64tass-cycle-number-at-point)
     (define-key map (kbd "<backtab>") #'64tass-align-and-cycle-left)
     (define-key map (kbd "RET") #'64tass-newline)
     map))

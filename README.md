@@ -23,13 +23,14 @@ depend on the full 64tass-mode.el major mode.
 
 ## Commands and default keybindings
 
-| Binding     | Command                       | Description                                             |
-|-------------|-------------------------------|---------------------------------------------------------|
-| `C-c C-b`   | `64tass-insert-BASIC-header`  | Insert BASIC loader stub                                |
-| `C-c C-c`   | `64tass-assemble-buffer`      | Invoke `64tass` to assemble the current buffer          |
-| `C-c C-e`   | `64tass-assemble-and-launch`  | Assemble with `64tass` and launch program in VICE/`x64` |
-| `<tab>`     | `64tass-align-and-cycle`      | Format the current line and move to the next segment    |
-| `<backtab>` | `64tass-align-and-cycle-left` | Format the current line and move to the prevous segment |
+| Binding     | Command                        | Description                                                     |
+|-------------|--------------------------------|-----------------------------------------------------------------|
+| `C-c C-b`   | `64tass-insert-BASIC-header`   | Insert BASIC loader stub                                        |
+| `C-c C-c`   | `64tass-assemble-buffer`       | Invoke `64tass` to assemble the current buffer                  |
+| `C-c C-e`   | `64tass-assemble-and-launch`   | Assemble with `64tass` and launch program in VICE/`x64`         |
+| `C-c C-n`   | `64tass-cycle-number-at-point` | Cycle through number formats/repesentations for number at point |
+| `<tab>`     | `64tass-align-and-cycle`       | Format the current line and move to the next segment            |
+| `<backtab>` | `64tass-align-and-cycle-left`  | Format the current line and move to the prevous segment         |
 
 
 ## Custom variables
