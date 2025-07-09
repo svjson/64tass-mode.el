@@ -210,7 +210,7 @@ used for alignment."
 
       (unless (equal current-format target-format)
 
-        (delete-region (line-beginning-position) (line-end-position))
+        (64tass--clear-line)
 
         (mapc (lambda (seg)
                 (indent-to (cdr seg))
@@ -334,9 +334,10 @@ is used for cycling behavior."
 
 
 (defun 64tass-align-and-cycle (&optional dir)
-  "Indent/format the current line as needed and cycle through indentation contexts.
+  "Format the current line as needed and cycle through indentation contexts.
 
-Cycles right through the line segments, unless -1 is provided as a value for DIR."
+Cycles right through the line segments, unless -1 is provided as a value
+for DIR."
   (interactive)
   (let* ((parsed-line (64tass--parse-line))
          (point-context (64tass--resolve-point-context parsed-line)))
@@ -387,6 +388,29 @@ Cycles right through the line segments, unless -1 is provided as a value for DIR
     (newline)
     (insert (concat "*=" raw-addr ))
     (newline)))
+
+
+;; Newline behavior
+
+(defun 64tass-newline ()
+  "Contextual newline handler for 64tass-mode."
+  (interactive)
+  (let* ((line (64tass--current-line))
+         (trim-line (string-trim line))
+         (parsed (64tass--parse-line))
+         (line-type (plist-get parsed :type)))
+    (cond
+     ((and (eq line-type :directive)
+           (plist-get parsed :args))
+      (progn (newline)
+             (insert (-> parsed (plist-get :directive) (plist-get :value)))
+             (insert " ")))
+
+     ((equal trim-line ".byte")
+      (64tass--clear-line))
+
+     (t
+      (newline-and-indent)))))
 
 
 
@@ -447,12 +471,13 @@ location."
 
 ;; 64tass-mode
 
-(defvar 64tass-mode-map
+(defconst 64tass-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-b") #'64tass-insert-BASIC-header)
     (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
     (define-key map (kbd "C-c C-e") #'64tass-assemble-and-launch)
     (define-key map (kbd "<backtab>") #'64tass-align-and-cycle-left)
+    (define-key map (kbd "RET") #'64tass-newline)
     map))
 
 ;;;###autoload

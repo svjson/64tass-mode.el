@@ -33,6 +33,11 @@
    (line-beginning-position)
    (line-end-position)))
 
+(defun 64tass--clear-line ()
+  "Clear the current line."
+  (delete-region (line-beginning-position)
+                 (line-end-position)))
+
 
 
 
