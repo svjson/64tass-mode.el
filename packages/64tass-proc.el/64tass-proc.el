@@ -205,7 +205,8 @@ file name of the output."
                 (when 64tass-proc-on-assembly-error-function
                   (funcall 64tass-proc-on-assembly-error-function assembly-output first-error)))
             (when 64tass-proc-on-assembly-success-function
-              (funcall 64tass-proc-on-assembly-success-function assembly-output))))))))
+              (funcall 64tass-proc-on-assembly-success-function assembly-output))))
+        assembly-output))))
 
 (provide '64tass-proc)
 

@@ -50,6 +50,7 @@
 (add-to-list 'load-path (expand-file-name "." default-directory))
 (add-to-list 'load-path (expand-file-name "./packages/64tass-proc.el" default-directory))
 (add-to-list 'load-path (expand-file-name "./packages/flycheck-64tass.el" default-directory))
+(add-to-list 'load-path (expand-file-name "./packages/vice-emu-proc.el" default-directory))
 (add-to-list 'load-path (expand-file-name "./test" default-directory))
 
 ;; Load test files

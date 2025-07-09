@@ -33,6 +33,7 @@
 (require '64tass-parse)
 (require '64tass-xref)
 (require '64tass-proc)
+(require 'vice-emu-proc)
 
 (condition-case err
     (progn (require 'flycheck)
@@ -391,6 +392,17 @@ Cycles right through the line segments, unless -1 is provided as a value for DIR
 
 ;; Assembly
 
+(defun 64tass-assemble-and-launch ()
+  "Assemble the current buffer and launch the result in VICE."
+  (interactive)
+  (let* ((assembly-output (64tass-assemble-buffer))
+         (error-count (plist-get assembly-output :error-count))
+         (assembly-success-p (member error-count '(0 nil)))
+         (output-file (plist-get assembly-output :output-file)))
+    (when assembly-success-p
+      (message "Launching '%s'..." output-file)
+      (vice-emu--launch-file output-file))))
+
 (defun 64tass--on-assembly-success (assembly-output)
   "Show assembly success message according to ASSEMBLY-OUTPUT.
 
@@ -432,7 +444,6 @@ location."
           (beginning-of-line)
           (forward-char (plist-get first-error :column)))))))
 
-
 
 ;; 64tass-mode
 
@@ -440,6 +451,7 @@ location."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-b") #'64tass-insert-BASIC-header)
     (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
+    (define-key map (kbd "C-c C-e") #'64tass-assemble-and-launch)
     (define-key map (kbd "<backtab>") #'64tass-align-and-cycle-left)
     map))
 
