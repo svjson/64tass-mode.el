@@ -33,6 +33,7 @@
 (require '64tass-parse)
 (require '64tass-xref)
 (require '64tass-proc)
+(require '64tass-mem)
 (require 'vice-emu-proc)
 
 (condition-case err
@@ -489,6 +490,28 @@ location."
           (forward-char (plist-get first-error :column)))))))
 
 
+;; eldoc
+(defun 64tass-eldoc-function ()
+  "Provide eldoc documentation for 64tass / 6502 symbols at point."
+  (let* ((sym (thing-at-point 'symbol t))
+         (sym-num (and sym (64tass-parse-number sym)))
+         (num-conversions (when sym-num
+                            (format "Decimal: %s   Hex: %s   Binary: %s"
+                                    (64tass-format-number sym-num :dec)
+                                    (64tass-format-number sym-num :hex)
+                                    (64tass-format-number sym-num :bin))))
+         (mem-map-entry (when sym-num
+                          (let ((entry (64tass--lookup-memory-doc sym-num)))
+                            (concat
+                             (if-let ((range (plist-get entry :range)))
+                                 (format "Memory Area: %s - %s" (car range) (cdr range))
+                               (format "Memory Address: %s" (plist-get entry :address)))
+                             "\n\n"
+                             (string-join (plist-get entry :text) "\n")))))
+         (entries (cl-remove nil (list mem-map-entry num-conversions))))
+    (string-join entries "\n\n")))
+
+
 ;; 64tass-mode
 
 (defconst 64tass-mode-map
@@ -511,11 +534,13 @@ location."
   (setq-local indent-line-function '64tass-align-and-cycle)
   (setq-local 64tass-proc-on-assembly-success-function 64tass-on-assembly-success-function)
   (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
+  (setq-local eldoc-documentation-function #'64tass-eldoc-function)
 
   (add-hook 'xref-backend-functions #'64tass-xref-backend nil t)
   (setq-local indent-tabs-mode nil)
 
   (when (featurep 'flycheck)
+    (declare-function flycheck-64tass-setup 'flycheck-64tass)
     (flycheck-64tass-setup)))
 
 

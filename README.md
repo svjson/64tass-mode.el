@@ -12,6 +12,7 @@ Major mode for working with [64tass](https://github.com/irmen/64tass) assembly, 
 - Syntax highlighting/font-locking.
 - Invoking `64tass` for assembly from within Emacs.
 - Assemble-and-launch with `64tass` and VICE (`x64`).
+- Built in memory map as contextual eldoc (based on https://sta.c64.org/cbm64mem.html )
 
 ## Related packages
 
