@@ -11,6 +11,7 @@ Major mode for working with [64tass](https://github.com/irmen/64tass) assembly, 
 - Context-sensitive indentation and cycling through line segments.
 - Syntax highlighting/font-locking.
 - Invoking `64tass` for assembly from within Emacs.
+- Assemble-and-launch with `64tass` and VICE (`x64`).
 
 ## Related packages
 
