@@ -35,7 +35,8 @@
     (:blank             :label :opcode :comment)
     (:directive         :directive :comment)
     (:instruction       :label :opcode :comment)
-    (:label             :label-standalone :comment)))
+    (:label             :label-standalone :comment)
+    (:comment           :comment)))
 
 
 (defconst 64tass-segment-composition

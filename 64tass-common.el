@@ -53,6 +53,11 @@
   (delete-region (line-beginning-position)
                  (line-end-position)))
 
+(defun 64tass--delete-indentation ()
+  "Delete all indentation (leading whitespace) from the current line."
+  (delete-region (line-beginning-position)
+                 (save-excursion (back-to-indentation) (point))))
+
 (defun 64tass--replace-region (start end str)
   "Replace region from START to END with STR."
   (delete-region start end)

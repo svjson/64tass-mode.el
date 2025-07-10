@@ -335,24 +335,58 @@ is used for cycling behavior."
           :next (nth next-index segments))))
 
 
+(defun 64tass--alignment-strategy (parsed-line point-context dir)
+  "Determine the alignment strategy of an align-and-cycle operation.
+
+Uses the PARSED-LINE representation of the target line and the resolved
+POINT-CONTEXT to determine how alignment and cycling should be performed.
+
+DIR determines the direction of the cursor cycling after alignment.
+
+Most common cases are handled by a default strategy, that adheres to the
+order and layout specified by `64tass-line-type-cycle-segments' and
+`64tass-segment-composition'.
+
+Exceptions to this symmetrical logic are tested for, before falling
+back to the default strategy."
+  (cond
+
+   ;; Cycle comment-column on "blank" lines back to margin
+   ((and (equal (plist-get parsed-line :type) :blank)
+         (member :comment parsed-line)
+         (>= (plist-get point-context :point)
+             (-> parsed-line (plist-get :comment) (plist-get :begin))))
+    (list :strategy :cycle-blank-comment
+          :align #'64tass--delete-indentation
+          :cycle-to :comment))
+
+   ;; Default strategy
+   (t
+    (list :strategy :default
+          :align #'64tass-align-current-line
+          :cycle-to (plist-get point-context (if (equal -1 dir) :previous :next))))))
+
 (defun 64tass-align-and-cycle (&optional dir)
   "Format the current line as needed and cycle through indentation contexts.
 
 Cycles right through the line segments, unless -1 is provided as a value
 for DIR."
   (interactive)
-  (let* ((parsed-line (64tass--parse-line))
-         (point-context (64tass--resolve-point-context parsed-line)))
-    (64tass-align-current-line)
+  (let* ((dir (or dir 1))
+         (parsed-line (64tass--parse-line))
+         (point-context (64tass--resolve-point-context parsed-line))
+         (strategy (64tass--alignment-strategy parsed-line point-context dir)))
+    (when-let ((align-function (plist-get strategy :align)))
+      (funcall align-function))
     (let* ((reparsed (64tass--parse-line))
-           (target-segment (plist-get point-context (if (equal -1 dir) :previous :next)))
+           (target-segment (plist-get strategy :cycle-to))
            (target-col (or (-> reparsed (plist-get target-segment) (plist-get :begin))
-                           (64tass--resolve-local-indent-for target-segment)))
-           (line-len (save-excursion (end-of-line) (current-column))))
+                           (64tass--resolve-local-indent-for target-segment))))
       (delete-trailing-whitespace (line-beginning-position) (line-end-position))
-      (when (> target-col line-len)
-        (move-end-of-line nil)
-        (indent-to target-col))
+      (let ((line-len (save-excursion (end-of-line) (current-column))))
+        (when (> target-col line-len)
+          (move-end-of-line nil)
+          (indent-to target-col)))
       (move-to-column target-col))))
 
 (defun 64tass-align-and-cycle-left ()

@@ -102,6 +102,30 @@
    (should (equal (64tass--current-line) ""))
    (should (equal (current-column) 0))))
 
+(ert-deftest align-and-cycle--blank-line--backward-cycles-through-precedent-columns ()
+  (with-cursor-in-64tass-mode-buffer
+   ((64tass-left-margin-indent . 0)
+    (64tass-instruction-column-indent . 16)
+    (64tass-comment-column-indent . 30))
+   "*=$0801
+.byte $0c, $08, $0a, $00, $9e, $20
+.byte $32, $30, $36, $34, $00, $00, $00
+
+       lda #$06         ; Load ALL the things!
+▮"
+   (64tass-align-and-cycle -1)
+   (should (equal (64tass--current-line) "                        "))
+   (should (equal (current-column) 24))
+
+   (64tass-align-and-cycle -1)
+   (should (equal (64tass--current-line) "       "))
+   (should (equal (current-column) 7))
+
+   (64tass-align-and-cycle -1)
+   (should (equal (64tass--current-line) ""))
+   (should (equal (current-column) 0))))
+
+
 
 (ert-deftest align-and-cycle--inline-label-typed--cycle-to-instruction ()
   (with-cursor-in-64tass-mode-buffer
@@ -122,5 +146,25 @@ mainloop▮"
    (64tass-align-and-cycle)
    (should (equal (64tass--current-line) "mainloop"))
    (should (equal (current-column) 0))))
+
+(ert-deftest align-and-cycle--comment-line--toggle-comment-column ()
+  (with-cursor-in-64tass-mode-buffer
+   ((64tass-left-margin-indent . 0)
+    (64tass-instruction-column-indent . 16)
+    (64tass-comment-column-indent . 30))
+   "*=$0810
+
+▮; This comment explains ALL!"
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "                              ; This comment explains ALL!"))
+   (should (equal (current-column) 30))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "; This comment explains ALL!"))
+   (should (equal (current-column) 0))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "                              ; This comment explains ALL!"))
+   (should (equal (current-column) 30))))
 
 ;;; 64tass-mode.align-and-cycle.test.el ends here
