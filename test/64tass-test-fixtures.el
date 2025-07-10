@@ -44,7 +44,7 @@ Enable `64tass-mode`, then run BODY."
              (insert ,content)
              (64tass-mode)
              (goto-char (point-min))
-             (when (search-forward "|" nil t)
+             (when (search-forward "▮" nil t)
                (delete-char -1))
              ,@body))
        ;; Restore original settings

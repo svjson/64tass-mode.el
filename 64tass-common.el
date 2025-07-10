@@ -25,6 +25,10 @@
 ;;; Code:
 
 
+;; Variables
+(defvar-local 64tass--inhibit-formatting nil)
+
+
 ;; Buffer/editing convenience functions
 
 (defun 64tass--current-line ()
@@ -32,6 +36,17 @@
   (buffer-substring-no-properties
    (line-beginning-position)
    (line-end-position)))
+
+(defun 64tass--goto-line (line-number)
+  "Move the cursor to the beginning of LINE-NUMBER."
+  (goto-char (point-min))
+  (beginning-of-line line-number))
+
+(defun 64tass--get-line (line-number)
+  "Get the line contents of line at LINE-NUMBER."
+  (save-excursion
+    (64tass--goto-line line-number)
+    (64tass--current-line)))
 
 (defun 64tass--clear-line ()
   "Clear the current line."
@@ -42,6 +57,46 @@
   "Replace region from START to END with STR."
   (delete-region start end)
   (insert str))
+
+(defun 64tass--walk-lines (direction fn)
+  "Walk line-by-line in DIRECTION, calling FN on each line.
+
+FN is a function (LINENUM LINE COLLECTED END-OF-INPUT) that returns one of:
+  - nil or :stop             → stop and return nil
+  - :continue                → skip this line, continue
+  - :collect                 → collect (LINENUM . LINE), continue
+  - (:collect VALUE)         → collect VALUE instead
+  - anything else             → stop and return that value
+
+The function never returns collected lines unless the lambda chooses to."
+  (save-excursion
+    (let ((collected '())
+          (result nil)
+          (done nil))
+      (while (not done)
+        (let* ((linenum (line-number-at-pos))
+               (line (64tass--current-line))
+               (at-boundary
+                (or (and (= direction -1) (= linenum 1))
+                    (and (= direction +1) (>= (point) (point-max)))))
+               (ret (funcall fn linenum line collected at-boundary)))
+          (cond
+           ((or (null ret) (eq ret :stop))
+            (setq done t result nil))
+           ((eq ret :continue)
+            nil)
+           ((eq ret :collect)
+            (push (cons linenum line) collected))
+           ((and (plistp ret) (plist-member ret :collect))
+            (push (plist-get ret :collect) collected))
+           (t
+            (setq done t result ret))))
+        (unless done
+          (if (or (and (= direction -1) (= (line-number-at-pos) 1))
+                  (and (= direction +1) (>= (point) (point-max))))
+              (setq done t)
+            (forward-line direction))))
+      result)))
 
 
 ;; Numerics and number formats

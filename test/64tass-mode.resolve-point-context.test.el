@@ -73,5 +73,4 @@
                           :current :comment
                           :next :label))))))
 
-
 ;;; 64tass-mode.resolve-point-context.test.el ends here

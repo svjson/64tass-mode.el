@@ -22,14 +22,16 @@ depend on the full 64tass-mode.el major mode.
 
 - [**`64tass-proc.el`**](packages/64tass-proc.el/README.md) - Utility package for interacting with/invoking `64tass`
 - [**`flycheck-64tass.el`**](packages/flycheck-64tass.el/README.md) - Flycheck syntax checker for `64tass`.
+- [**`vice-emu-proc.el`**](packages/vice-emu-proc.el/README.md) - Utility package for interacting with/invoking The VICE Emulator (`x64`).
 
 ## Commands and default keybindings
 
 | Binding     | Command                        | Description                                                     |
 |-------------|--------------------------------|-----------------------------------------------------------------|
-| `C-c C-b`   | `64tass-insert-BASIC-header`   | Insert BASIC loader stub                                        |
 | `C-c C-c`   | `64tass-assemble-buffer`       | Invoke `64tass` to assemble the current buffer                  |
 | `C-c C-e`   | `64tass-assemble-and-launch`   | Assemble with `64tass` and launch program in VICE/`x64`         |
+| `C-c i h`   | `64tass-insert-BASIC-header`   | Insert BASIC loader stub                                        |
+| `C-c i b`   | `64tass-insert-docblock`       | Insert docblock for the following line                          |
 | `C-c C-n`   | `64tass-cycle-number-at-point` | Cycle through number formats/repesentations for number at point |
 | `<tab>`     | `64tass-align-and-cycle`       | Format the current line and move to the next segment            |
 | `<backtab>` | `64tass-align-and-cycle-left`  | Format the current line and move to the prevous segment         |

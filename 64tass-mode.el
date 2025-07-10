@@ -31,6 +31,7 @@
 (require 'dash)
 (require '64tass-common)
 (require '64tass-parse)
+(require '64tass-docblock)
 (require '64tass-xref)
 (require '64tass-proc)
 (require '64tass-mem)
@@ -391,7 +392,7 @@ for DIR."
     (newline)))
 
 
-;; Newline behavior
+;; Newline and TAB behavior
 
 (defun 64tass-newline ()
   "Contextual newline handler for 64tass-mode."
@@ -401,6 +402,8 @@ for DIR."
          (parsed (64tass--parse-line))
          (line-type (plist-get parsed :type)))
     (cond
+     ((64tass-docblock--is-docblock-line)
+      (64tass-docblock--newline))
      ((and (eq line-type :directive)
            (plist-get parsed :args))
       (progn (newline)
@@ -412,6 +415,26 @@ for DIR."
 
      (t
       (newline-and-indent)))))
+
+(defun 64tass-indent ()
+  "Contextual tab/indent handler for 64tass-mode."
+  (interactive)
+  (cond
+   ((64tass-docblock--is-docblock-line)
+    (64tass-docblock--tab))
+
+   (t
+    (64tass-align-and-cycle))))
+
+(defun 64tass-deindent ()
+  "Contextual backtab/de-indent handler for 64tass-mode."
+  (interactive)
+  (cond
+   ((64tass-docblock--is-docblock-line)
+    (64tass-docblock--backtab))
+
+   (t
+    (64tass-align-and-cycle-left))))
 
 (defun 64tass-cycle-number-at-point ()
   "Cycle the number format of the value at point.
@@ -489,6 +512,7 @@ location."
           (beginning-of-line)
           (forward-char (plist-get first-error :column)))))))
 
+
 
 ;; eldoc
 (defun 64tass-eldoc-function ()
@@ -514,13 +538,34 @@ location."
 
 ;; 64tass-mode
 
+(defun 64tass--after-change-function (beg _end _len)
+  "After change function handler for 64tass-mode.
+
+Reformats structures that may have become misaligned due to editing,
+such as code columns and docblocks.
+
+BEG, END and LEN according to the expected format of the
+`after-change-functions' hook.
+
+May not run during undo-operations, as it confuses the undo marks
+and potentially destroys buffer contents."
+  (when (not (bound-and-true-p undo-in-progress))
+    (let* ((line (64tass--parse-line))
+           (type (plist-get line :type)))
+      (pcase type
+        (:comment
+         (when (64tass-docblock--is-docblock-line)
+           (unless 64tass--inhibit-formatting
+             (64tass-docblock--format-block-at (line-number-at-pos beg)))))))))
+
 (defconst 64tass-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-b") #'64tass-insert-BASIC-header)
     (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
     (define-key map (kbd "C-c C-e") #'64tass-assemble-and-launch)
     (define-key map (kbd "C-c C-n") #'64tass-cycle-number-at-point)
-    (define-key map (kbd "<backtab>") #'64tass-align-and-cycle-left)
+    (define-key map (kbd "C-c i h") #'64tass-insert-BASIC-header)
+    (define-key map (kbd "C-c i b") #'64tass-docblock--insert-contextual)
+    (define-key map (kbd "<backtab>") #'64tass-deindent)
     (define-key map (kbd "RET") #'64tass-newline)
     map))
 
@@ -531,10 +576,12 @@ location."
   "Major mode for 6502/6510 assembly with 64tass."
   (set-syntax-table (make-syntax-table 64tass-mode-syntax-table))
   (setq-local font-lock-defaults '(64tass-font-lock-keywords))
-  (setq-local indent-line-function '64tass-align-and-cycle)
+  (setq-local indent-line-function '64tass-indent)
   (setq-local 64tass-proc-on-assembly-success-function 64tass-on-assembly-success-function)
   (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
   (setq-local eldoc-documentation-function #'64tass-eldoc-function)
+
+  (add-hook 'after-change-functions #'64tass--after-change-function nil t)
 
   (add-hook 'xref-backend-functions #'64tass-xref-backend nil t)
   (setq-local indent-tabs-mode nil)

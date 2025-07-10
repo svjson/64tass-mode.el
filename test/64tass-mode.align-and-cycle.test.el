@@ -37,7 +37,7 @@
 .byte $0c, $08, $0a, $00, $9e, $20
 .byte $32, $30, $36, $34, $00, $00, $00
 
-|       lda #$06         ; Load ALL the things!
+▮       lda #$06         ; Load ALL the things!
 "
    (let ((formatted-line
           "                lda #$06      ; Load ALL the things!"))
@@ -63,7 +63,7 @@
 .byte $32, $30, $36, $34, $00, $00, $00
 
        lda #$06         ; Load ALL the things!
-|     ldy #$00            ; Moar comments!
+▮     ldy #$00            ; Moar comments!
 "
    (let ((formatted-line
           "       ldy #$00         ; Moar comments!"))
@@ -89,7 +89,7 @@
 .byte $32, $30, $36, $34, $00, $00, $00
 
        lda #$06         ; Load ALL the things!
-|"
+▮"
    (64tass-align-and-cycle)
    (should (equal (64tass--current-line) "       "))
    (should (equal (current-column) 7))
@@ -110,7 +110,7 @@
     (64tass-comment-column-indent . 30))
    "*=$0810
 
-mainloop|"
+mainloop▮"
    (64tass-align-and-cycle)
    (should (equal (64tass--current-line) "mainloop        "))
    (should (equal (current-column) 16))
