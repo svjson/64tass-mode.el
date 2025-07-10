@@ -100,6 +100,10 @@ tass64-mode buffers."
   :type 'function
   :group '64tass)
 
+
+;; Local variables
+(defvar-local 64tass--column-cache '()
+  "Contains cached lookups of local column layout calculations.")
 
 
 ;; Regex constants
@@ -232,33 +236,60 @@ used for alignment."
                   (insert (-> parsed-line (plist-get (car seg)) (plist-get :value)))))
               target-format)))))
 
-
-(defun 64tass--resolve-local-indentation ()
-  "Resolve local indentation settings for the current line.
+(defun 64tass--resolve-local-indentation (&optional line-number)
+  "Resolve local indentation settings for the line at LINE-NUMBER.
 
 This resolves the case where the closest preceding line of the same
 type overrides the column configuration by example."
   (save-excursion
-    (let ((instr-indent nil)
+    (let ((line-number (or line-number (line-number-at-pos)))
+          (instr-indent nil)
           (comment-indent nil)
           (bobp (when (eq 1 (line-number-at-pos)) t)))
       (forward-line -1)
       (while (and (or (not instr-indent)
                       (not comment-indent))
                   (not bobp))
-        (let* ((line (64tass--parse-line))
-               (type (plist-get line :type))
-               (opcode (plist-get line :opcode))
-               (comment (plist-get line :comment)))
-          (when (eq type :instruction)
-            (setq instr-indent (plist-get opcode :begin))
-            (when comment
-              (setq comment-indent (plist-get comment :begin))))
-          (if (eq 1 (line-number-at-pos))
-              (setq bobp t)
-            (forward-line -1))))
-      (list :instr-indent instr-indent
-            :comment-indent comment-indent))))
+        (when-let ((_ (not instr-indent))
+                   (cached-instr-indent
+                    (plist-get
+                     (alist-get (line-number-at-pos) 64tass--column-cache)
+                     :instr-indent)))
+          (setq instr-indent (list :indent cached-instr-indent
+                                   :source :cache
+                                   :line (line-number-at-pos))))
+        (when-let ((_ (not comment-indent))
+                   (cached-comment-indent
+                    (plist-get
+                     (alist-get (line-number-at-pos) 64tass--column-cache)
+                     :comment-indent)))
+          (setq comment-indent (list :indent cached-comment-indent
+                                     :source :cache
+                                     :line (line-number-at-pos))))
+        (when (or (not instr-indent)
+                  (not comment-indent))
+          (let* ((line (64tass--parse-line))
+                 (type (plist-get line :type))
+                 (opcode (plist-get line :opcode))
+                 (comment (plist-get line :comment)))
+            (when (eq type :instruction)
+              (when (and (not instr-indent) opcode)
+                (setq instr-indent (list :indent (plist-get opcode :begin)
+                                         :source :line
+                                         :line (line-number-at-pos))))
+              (when (and (not comment-indent) comment)
+                (setq comment-indent (list :indent (plist-get comment :begin)
+                                           :source :line
+                                           :line (line-number-at-pos)))))
+            (if (eq 1 (line-number-at-pos))
+                (setq bobp t)
+              (forward-line -1)))))
+      (64tass--cache-resolved-columns
+       line-number
+       (64tass--pruned-plist :instr-indent instr-indent
+                             :comment-indent comment-indent))
+      (list :instr-indent (plist-get instr-indent :indent)
+            :comment-indent (plist-get comment-indent :indent)))))
 
 
 (defun 64tass--resolve-contextual-indent-for (seg-type &optional local-indentation)
@@ -425,6 +456,71 @@ for DIR."
     (insert (concat "*=" raw-addr ))
     (newline)))
 
+
+
+; Column resolution cache
+
+(defun 64tass--clear-cache (line-number)
+  "Invalidates all cache entries for lines after LINE-NUMBER.
+
+This is called whenever a line is edited, as any cache entries
+after the edited line may now be invalid."
+  (setq 64tass--column-cache
+        (cl-remove-if (lambda (entry)
+                        (>= (car entry) line-number))
+                      64tass--column-cache)))
+
+(defun 64tass--group-indent-cache-values (resolved)
+  "Return descending alist of (line . plist) for RESOLVED indent cache."
+  (let* ((key-info
+          (cl-loop for (key val) on resolved by #'cddr
+                   collect (list key (plist-get val :indent) (plist-get val :line))))
+         (line-points (sort (delete-dups (mapcar (lambda (x) (nth 2 x)) key-info)) #'>))
+         (result '()))
+    (dolist (line line-points)
+      (let ((active
+             (cl-loop for (key indent src-line) in key-info
+                      when (<= src-line line)
+                      append (list key indent))))
+        (setq result (append result (list (cons line active))))))
+    (sort result (lambda (a b) (> (car a) (car b))))))
+
+(defun 64tass--put-indent-cache (line-number new-plist)
+  "Insert or update the column indent cache for LINE-NUMBER with NEW-PLIST.
+If an entry exists, merge it with NEW-PLIST, preferring NEW-PLIST values."
+  (let ((existing (assoc line-number 64tass--column-cache)))
+    (if existing
+        (setcdr existing
+                (let ((old (cdr existing)))
+                  ;; Merge, preferring values from new-plist
+                  (cl-loop for (key val) on new-plist by #'cddr
+                           do (setq old (plist-put old key val)))
+                  old))
+      (setq 64tass--column-cache
+            (cons (cons line-number new-plist)
+                  64tass--column-cache)))))
+
+(defun 64tass--cache-resolved-columns (line-number values)
+  "Stores column resolution VALUES to `64tass--column-cache'.
+
+The values are stored backwards at intervals of 10 lines from the LINE-NUMBER
+for which the resolution was performed up until the source line(s)."
+  (let ((cache-entries (64tass--group-indent-cache-values values)))
+    (when cache-entries
+      (save-excursion
+        (64tass--goto-line line-number)
+        (64tass--put-indent-cache line-number (cdr (car cache-entries)))
+        (while cache-entries
+          (forward-line -10)
+          (if (<= (line-number-at-pos) (caar cache-entries))
+              (progn
+                (64tass--goto-line (caar cache-entries))
+                (64tass--put-indent-cache (line-number-at-pos) (cdr (car cache-entries)))
+                (setq cache-entries (cdr cache-entries)))
+            (64tass--put-indent-cache (line-number-at-pos) (cdr (car cache-entries))))))
+      (setq 64tass--column-cache (sort 64tass--column-cache (lambda (a b) (< (car a) (car b))))))))
+
+
 
 ;; Newline and TAB behavior
 
@@ -575,14 +671,17 @@ location."
 (defun 64tass--after-change-function (beg _end _len)
   "After change function handler for 64tass-mode.
 
-Reformats structures that may have become misaligned due to editing,
-such as code columns and docblocks.
-
 BEG, END and LEN according to the expected format of the
 `after-change-functions' hook.
 
-May not run during undo-operations, as it confuses the undo marks
-and potentially destroys buffer contents."
+- Invalidates the column cache of all lines following the change.
+
+- Reformats structures that may have become misaligned due to editing,
+  such as code columns and docblocks.
+
+Reformatting may not run during undo-operations, as it confuses the undo
+marks and potentially destroys buffer contents."
+  (64tass--clear-cache (line-number-at-pos beg))
   (when (not (bound-and-true-p undo-in-progress))
     (let* ((line (64tass--parse-line))
            (type (plist-get line :type)))

@@ -24,6 +24,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 
 ;; Variables
 (defvar-local 64tass--inhibit-formatting nil)
@@ -102,6 +104,25 @@ The function never returns collected lines unless the lambda chooses to."
               (setq done t)
             (forward-line direction))))
       result)))
+
+
+;; plist functions
+
+(defun 64tass--pruned-plist (&rest values)
+  "Create a plist from VALUES, excluding any keys whose values are nil.
+
+This function may be called either with a single plist, or plist contents as
+varargs.
+
+Examples:
+  (64tass--pruned-plist :a 1 :b nil)     => (:a 1)
+  (64tass--pruned-plist \\='(:a 1 :b nil)   => (:a 1)"
+  (let ((plist (if (and (= (length values) 1) (plistp (car values)))
+                   (car values)
+                 values)))
+    (cl-loop for (key val) on plist by #'cddr
+             when val
+             append (list key val))))
 
 
 ;; Numerics and number formats
