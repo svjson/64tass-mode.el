@@ -1,0 +1,21 @@
+name: ert Test Suite
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Install Emacs
+      uses: purcell/setup-emacs@master
+      with:
+        version: '30.1'
+
+    - name: Run tests via Makefile
+      run: make test
