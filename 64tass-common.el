@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'thingatpt)
 
 
 ;; Variables
@@ -168,7 +169,7 @@ Valid format args: are :dec, :hex and :bin."
 
 (defun 64tass-to-binary-string (n &optional width)
   "Return a binary string for N, optionally padded to WIDTH bits."
-  (let ((width (or width 8))
+  (let ((width (if (> n 255) 16 (or width 8)))
         (s ""))
     (while (> n 0)
       (setq s (concat (if (zerop (logand n 1)) "0" "1") s))
@@ -177,6 +178,40 @@ Valid format args: are :dec, :hex and :bin."
     (concat "%" (if width
                     (setq s (substring (concat (make-string width ?0) s) (- width)))
                   s))))
+
+
+; Buffer query functions
+
+(defun 64tass--symbol-at-point (&optional point parsed-line)
+  "Return analysis of the symbol at point.
+
+POINT may be provided to perform the query at location other than the
+current (point) position.
+
+PARSED-LINE is optional, but required to correctly determine if a number
+at point is sensitive to immediate/non-immediate notation.
+
+If a symbol at point is determined to be a memory address, that address
+is provided under the :memory-address key in the return value."
+  (save-excursion
+    (when point
+      (goto-char point))
+    (let* ((sym (thing-at-point 'symbol t))
+           (sym-num (and sym (64tass-parse-number sym)))
+           (hash (thing-at-point-looking-at "#[$%]\\{0,1\\}[0-9a-f]+"))
+           (immediate-sensitive (or (null parsed-line)
+                                    (eq (plist-get parsed-line :type) :instruction)))
+           (mem-addr-p (and immediate-sensitive (not hash))))
+      (when hash
+        (setq sym (concat "#" sym)))
+      (64tass--pruned-plist :symbol sym
+                            :numeric-value sym-num
+                            :numeric-form (when sym-num
+                                            (list :dec (64tass-format-number sym-num :dec)
+                                                  :hex (64tass-format-number sym-num :hex)
+                                                  :bin (64tass-format-number sym-num :bin)))
+                            :memory-address (when mem-addr-p sym-num)))))
+
 
 
 

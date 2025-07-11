@@ -57,6 +57,7 @@
 (load "64tass-common.format-number.test.el")
 (load "64tass-common.parse-number.test.el")
 (load "64tass-common.plist-fns.test.el")
+(load "64tass-common.buffer-query.test.el")
 (load "64tass-docblock.content-extraction.test.el")
 (load "64tass-docblock.line-identification.test.el")
 (load "64tass-mode.align-and-cycle.test.el")

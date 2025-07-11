@@ -31,32 +31,41 @@
 Temporarily set SETTINGS (alist of variable/value)
 Insert CONTENT into a temp buffer with `|` marking point.
 Enable `64tass-mode`, then run BODY."
-  `(let ((original-settings (mapcar (lambda (pair)
-                                      (cons (car pair) (symbol-value (car pair))))
-                                    ',settings)))
-     (unwind-protect
-         (progn
-           ,@(mapcar (lambda (pair)
-                       `(setf ,(car pair) ,(cdr pair)))
-                     settings)
-           (with-temp-buffer
-             (setq-local font-lock-mode nil)
-             (insert ,content)
-             (goto-char (point-min))
-             (when (search-forward "▮" nil t)
-               (delete-char -1))
-             (64tass-mode)
-             ,@body))
-       ;; Restore original settings
-       ,@(mapcar (lambda (pair)
-                   `(setf ,(car pair) (cdr (assoc ',(car pair) original-settings))))
-                 settings))))
+  (let* ((override-settings (or settings '((64tass-left-margin-indent . 0)
+                                           (64tass-instruction-column-indent . 16)
+                                           (64tass-comment-column-indent . 30))))
+         (apply-settings
+          (mapcar (lambda (pair)
+                    `(setf ,(car pair) ,(cdr pair)))
+                  override-settings))
+         (restore-settings
+          (mapcar (lambda (pair)
+                    `(setf ,(car pair) (cdr (assoc ',(car pair) original-settings))))
+                  override-settings)))
+    `(let ((original-settings
+             (mapcar (lambda (pair)
+                       (cons (car pair) (symbol-value (car pair))))
+                     ',override-settings)))
+       (unwind-protect
+           (progn
+             ,@apply-settings
+             (with-temp-buffer
+               (setq-local font-lock-mode nil)
+               (insert ,content)
+               (goto-char (point-min))
+               (when (search-forward "▮" nil t)
+                 (delete-char -1))
+               (64tass-mode)
+               ,@body))
+         ,@restore-settings))))
 
 (defun sim-type-key (keychar)
+  "Simulate a self-inserting keypress producing input KEYCHAR."
   (let ((last-command-event keychar))
     (call-interactively #'self-insert-command)))
 
 (defun sim-type-backspace ()
+  "Simulate a backspace/`backward-delete-char' keypress."
   (let ((last-command-event 127))
     (call-interactively #'backward-delete-char)))
 

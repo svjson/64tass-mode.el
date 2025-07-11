@@ -34,7 +34,8 @@
   (should (equal (64tass-format-number 1 :bin) "%00000001"))
   (should (equal (64tass-format-number 0 :bin) "%00000000"))
   (should (equal (64tass-format-number 128 :bin) "%10000000"))
-  (should (equal (64tass-format-number 127 :bin) "%01111111")))
+  (should (equal (64tass-format-number 127 :bin) "%01111111"))
+  (should (equal (64tass-format-number 65534 :bin) "%1111111111111110")))
 
 (ert-deftest format-number--hex ()
   (should (equal (64tass-format-number 240 :hex) "$f0"))
@@ -42,7 +43,8 @@
   (should (equal (64tass-format-number 1 :hex) "$01"))
   (should (equal (64tass-format-number 0 :hex) "$00"))
   (should (equal (64tass-format-number 128 :hex) "$80"))
-  (should (equal (64tass-format-number 127 :hex) "$7f")))
+  (should (equal (64tass-format-number 127 :hex) "$7f"))
+  (should (equal (64tass-format-number 65534 :hex) "$fffe")))
 
 (ert-deftest format-number--decimal ()
   (should (equal (64tass-format-number 240 :dec) "240"))
@@ -50,6 +52,7 @@
   (should (equal (64tass-format-number 1 :dec) "1"))
   (should (equal (64tass-format-number 0 :dec) "0"))
   (should (equal (64tass-format-number 128 :dec) "128"))
-  (should (equal (64tass-format-number 127 :dec) "127")))
+  (should (equal (64tass-format-number 127 :dec) "127"))
+  (should (equal (64tass-format-number 65534 :dec) "65534")))
 
 ;;; 64tass-common.format-number.test.el ends here

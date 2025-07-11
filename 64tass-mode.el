@@ -696,15 +696,17 @@ location."
 ;; eldoc
 (defun 64tass-eldoc-function ()
   "Provide eldoc documentation for 64tass / 6502 symbols at point."
-  (let* ((sym (thing-at-point 'symbol t))
-         (sym-num (and sym (64tass-parse-number sym)))
-         (num-conversions (when sym-num
+  (let* ((symbol (64tass--symbol-at-point nil (64tass--parse-line)))
+         (num (plist-get symbol :numeric-value))
+         (num-form (plist-get symbol :numeric-form))
+         (mem-address (plist-get symbol :memory-address))
+         (num-conversions (when num
                             (format "Decimal: %s   Hex: %s   Binary: %s"
-                                    (64tass-format-number sym-num :dec)
-                                    (64tass-format-number sym-num :hex)
-                                    (64tass-format-number sym-num :bin))))
-         (mem-map-entry (when sym-num
-                          (let ((entry (64tass--lookup-memory-doc sym-num)))
+                                    (plist-get num-form :dec)
+                                    (plist-get num-form :hex)
+                                    (plist-get num-form :bin))))
+         (mem-map-entry (when mem-address
+                          (let ((entry (64tass--lookup-memory-doc mem-address)))
                             (concat
                              (if-let ((range (plist-get entry :range)))
                                  (format "Memory Area: %s - %s" (car range) (cdr range))
