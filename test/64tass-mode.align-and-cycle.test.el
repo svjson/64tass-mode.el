@@ -28,6 +28,10 @@
 (require '64tass-mode)
 (require '64tass-test-fixtures)
 
+
+
+; :type :instruction
+
 (ert-deftest align-and-cycle--instruction-with-comment--no-precedent ()
   (with-cursor-in-64tass-mode-buffer
    ((64tass-left-margin-indent . 0)
@@ -52,6 +56,7 @@
      (64tass-align-and-cycle)
      (should (equal (64tass--current-line) formatted-line))
      (should (equal (current-column) 0)))))
+
 
 (ert-deftest align-and-cycle--instruction-with-comment--formats-to-precedent ()
   (with-cursor-in-64tass-mode-buffer
@@ -78,6 +83,25 @@
      (64tass-align-and-cycle)
      (should (equal (64tass--current-line) formatted-line))
      (should (equal (current-column) 0)))))
+
+
+(ert-deftest align-and-cycle--instruction--wide-instr-column ()
+  (with-cursor-in-64tass-mode-buffer
+   ((64tass-left-margin-indent . 0)
+    (64tass-instruction-column-indent . 20)
+    (64tass-comment-column-indent . 40))
+   "▮                    sta lvl_draw_screen_r+1"
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "                    sta lvl_draw_screen_r+1"))
+   (should (equal (current-column) 20))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "                    sta lvl_draw_screen_r+1 "))
+   (should (equal (current-column) 44))))
+
+
+
+; :type :blank
 
 (ert-deftest align-and-cycle--blank-line--cycles-through-precedent-columns ()
   (with-cursor-in-64tass-mode-buffer
@@ -126,6 +150,8 @@
    (should (equal (current-column) 0))))
 
 
+
+; :type :label
 
 (ert-deftest align-and-cycle--inline-label-typed--cycle-to-instruction ()
   (with-cursor-in-64tass-mode-buffer
@@ -147,6 +173,10 @@ mainloop▮"
    (should (equal (64tass--current-line) "mainloop"))
    (should (equal (current-column) 0))))
 
+
+
+; :type :comment
+
 (ert-deftest align-and-cycle--comment-line--toggle-comment-column ()
   (with-cursor-in-64tass-mode-buffer
    ((64tass-left-margin-indent . 0)
@@ -166,5 +196,7 @@ mainloop▮"
    (64tass-align-and-cycle)
    (should (equal (64tass--current-line) "                              ; This comment explains ALL!"))
    (should (equal (current-column) 30))))
+
+
 
 ;;; 64tass-mode.align-and-cycle.test.el ends here

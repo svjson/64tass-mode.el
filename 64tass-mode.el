@@ -415,6 +415,14 @@ for DIR."
                            (64tass--resolve-local-indent-for target-segment))))
       (delete-trailing-whitespace (line-beginning-position) (line-end-position))
       (let ((line-len (save-excursion (end-of-line) (current-column))))
+        (when-let ((overlap-segment
+                    (cl-loop for (key val) on reparsed by #'cddr
+                             when (and (not (equal key :type))
+                                       (not (equal key target-segment))
+                                       (>= target-col (plist-get val :begin))
+                                       (<= target-col (plist-get val :end)))
+                             return val)))
+          (setq target-col (1+ (plist-get overlap-segment :end))))
         (when (> target-col line-len)
           (move-end-of-line nil)
           (indent-to target-col)))
