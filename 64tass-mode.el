@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; commentary
+;; Defines 64tass-mode, a major mode for working with 64tass assembly code.
 
 ;;; Code:
 
