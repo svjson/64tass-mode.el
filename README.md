@@ -3,6 +3,7 @@
 
 [![Emacs: 30.0](https://img.shields.io/badge/Emacs-30.0-blue.svg)](https://www.gnu.org/software/emacs/)
 ![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)
+![CI](https://github.com/svjson/64tass-mode.el/actions/workflows/test.yml/badge.svg)
 
 Major mode for working with [64tass](https://github.com/irmen/64tass) assembly, offering column-based editing.
 
