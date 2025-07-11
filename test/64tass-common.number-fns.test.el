@@ -1,4 +1,4 @@
-;;; 64tass-mode.format-number.test.el --- summary -*- lexical-binding: t -*-
+;;; 64tass-mode.number-fns.test.el --- summary -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Sven Johansson
 
@@ -20,13 +20,45 @@
 
 ;;; Commentary:
 
-;; Tests for `64tass-format-number', formatting an integer value
+;; Tests for common functions dealing with numbers and numeric `64tass-format-number', formatting an integer value
 ;; as decimal, hexadecimal or binary.
 
 ;;; Code:
 
 (require 'ert)
 (require '64tass-common)
+
+
+
+;; 64tass-parse-number
+
+(ert-deftest parse-number--binary ()
+  (should (equal (64tass-parse-number "%11110000") 240))
+  (should (equal (64tass-parse-number "%00001111") 15))
+  (should (equal (64tass-parse-number "%00000001") 1))
+  (should (equal (64tass-parse-number "%00000000") 0))
+  (should (equal (64tass-parse-number "%10000000") 128))
+  (should (equal (64tass-parse-number "%01111111") 127)))
+
+(ert-deftest parse-number--hex ()
+  (should (equal (64tass-parse-number "$f0") 240))
+  (should (equal (64tass-parse-number "$0f") 15))
+  (should (equal (64tass-parse-number "$01") 1))
+  (should (equal (64tass-parse-number "$00") 0))
+  (should (equal (64tass-parse-number "$80") 128))
+  (should (equal (64tass-parse-number "$7f") 127)))
+
+(ert-deftest parse-number--decimal ()
+  (should (equal (64tass-parse-number "240") 240))
+  (should (equal (64tass-parse-number "15") 15))
+  (should (equal (64tass-parse-number "1") 1))
+  (should (equal (64tass-parse-number "0") 0))
+  (should (equal (64tass-parse-number "128") 128))
+  (should (equal (64tass-parse-number "127") 127)))
+
+
+
+;; 64tass-format-number
 
 (ert-deftest format-number--binary ()
   (should (equal (64tass-format-number 240 :bin) "%11110000"))
@@ -55,4 +87,21 @@
   (should (equal (64tass-format-number 127 :dec) "127"))
   (should (equal (64tass-format-number 65534 :dec) "65534")))
 
-;;; 64tass-common.format-number.test.el ends here
+
+;; 64tass--number-formats
+
+(ert-deftest number-formats--8bit-number ()
+  (should (equal (64tass--number-formats 32)
+                 (list :dec "32"
+                       :hex "$20"
+                       :bin "%00100000"))))
+
+(ert-deftest number-formats--16bit-number ()
+  (should (equal (64tass--number-formats 53287)
+                 (list :dec "53287"
+                       :hex "$d027"
+                       :bin "%1101000000100111"))))
+
+
+
+;;; 64tass-common.number-fns.test.el ends here

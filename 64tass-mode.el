@@ -31,6 +31,7 @@
 (require 'dash)
 (require '64tass-common)
 (require '64tass-parse)
+(require '64tass-eldoc)
 (require '64tass-docblock)
 (require '64tass-xref)
 (require '64tass-proc)
@@ -691,30 +692,6 @@ location."
           (beginning-of-line)
           (forward-char (plist-get first-error :column)))))))
 
-
-
-;; eldoc
-(defun 64tass-eldoc-function ()
-  "Provide eldoc documentation for 64tass / 6502 symbols at point."
-  (let* ((symbol (64tass--symbol-at-point nil (64tass--parse-line)))
-         (num (plist-get symbol :numeric-value))
-         (num-form (plist-get symbol :numeric-form))
-         (mem-address (plist-get symbol :memory-address))
-         (num-conversions (when num
-                            (format "Decimal: %s   Hex: %s   Binary: %s"
-                                    (plist-get num-form :dec)
-                                    (plist-get num-form :hex)
-                                    (plist-get num-form :bin))))
-         (mem-map-entry (when mem-address
-                          (let ((entry (64tass--lookup-memory-doc mem-address)))
-                            (concat
-                             (if-let ((range (plist-get entry :range)))
-                                 (format "Memory Area: %s - %s" (car range) (cdr range))
-                               (format "Memory Address: %s" (plist-get entry :address)))
-                             "\n\n"
-                             (string-join (plist-get entry :text) "\n")))))
-         (entries (cl-remove nil (list mem-map-entry num-conversions))))
-    (string-join entries "\n\n")))
 
 
 ;; 64tass-mode

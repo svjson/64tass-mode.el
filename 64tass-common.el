@@ -167,6 +167,15 @@ Valid format args: are :dec, :hex and :bin."
       (:bin (64tass-to-binary-string n))
       (:hex (format "$%02x" n)))))
 
+(defun 64tass--number-formats (num)
+  "Return a plist containing NUM in all 64tass supported notations.
+
+Example:
+  (64tass--number-formats 32) => (:dec \"32\" :hex \"$32\" :bin \"%00100000)"
+  (list :dec (64tass-format-number num :dec)
+        :hex (64tass-format-number num :hex)
+        :bin (64tass-format-number num :bin)))
+
 (defun 64tass-to-binary-string (n &optional width)
   "Return a binary string for N, optionally padded to WIDTH bits."
   (let ((width (if (> n 255) 16 (or width 8)))
@@ -206,10 +215,7 @@ is provided under the :memory-address key in the return value."
         (setq sym (concat "#" sym)))
       (64tass--pruned-plist :symbol sym
                             :numeric-value sym-num
-                            :numeric-form (when sym-num
-                                            (list :dec (64tass-format-number sym-num :dec)
-                                                  :hex (64tass-format-number sym-num :hex)
-                                                  :bin (64tass-format-number sym-num :bin)))
+                            :numeric-form (when sym-num (64tass--number-formats sym-num))
                             :memory-address (when mem-addr-p sym-num)))))
 
 
