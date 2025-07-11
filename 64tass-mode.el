@@ -102,8 +102,15 @@ tass64-mode buffers."
 
 
 ;; Local variables
+
 (defvar-local 64tass--column-cache '()
   "Contains cached lookups of local column layout calculations.")
+
+(defvar-local 64tass--before-change-parsed-line nil
+  "Snapshot of the current line composition before the last edit.")
+
+(defvar-local 64tass--before-change-point nil
+  "Snapshot of the point position before last edit.")
 
 
 ;; Regex constants
@@ -433,6 +440,40 @@ for DIR."
   (interactive)
   (64tass-align-and-cycle -1))
 
+(defun 64tass--enforce-column-layout ()
+  "Attempt to uphold the segment columns as they were before and edit.
+
+Designed to be triggered as an `after-change-functions' hook, and relies
+on `64tass--before-change-parsed-line' to compare the current line composition
+with the pre-edit dito."
+  (unless 64tass--inhibit-formatting
+    (when-let ((64tass--inhibit-formatting t)
+               (before 64tass--before-change-parsed-line)
+               (after (64tass--parse-line))
+               (pnt (current-column)))
+      (let ((next-type nil)
+            (next-seg nil))
+        (cl-loop for key in before by #'cddr
+                 for seg = (plist-get before key)
+                 when (not (equal key :type))
+                 do (progn
+                      (when (and (< pnt (plist-get seg :begin))
+                                 (or (null next-seg)
+                                     (< (plist-get seg :begin) (plist-get next-seg :begin))))
+                        (setq next-seg seg)
+                        (setq next-type key))))
+        (when-let ((new-seg (plist-get after next-type))
+                   (before-begin (plist-get next-seg :begin))
+                   (after-begin (plist-get new-seg :begin)))
+          (save-excursion
+            (move-to-column after-begin)
+            (cond
+
+             ((< before-begin after-begin)
+              (kill-backward-chars 1))
+
+             ((> before-begin after-begin)
+              (insert " ")))))))))
 
 
 
@@ -676,8 +717,13 @@ location."
 
 ;; 64tass-mode
 
+(defun 64tass--before-change-function (_beg _end)
+  "Before change function hook handler for 64tass-mode."
+  (setq 64tass--before-change-parsed-line (64tass--parse-line))
+  (setq 64tass--before-change-point (point)))
+
 (defun 64tass--after-change-function (beg _end _len)
-  "After change function handler for 64tass-mode.
+  "After change function hook handler for 64tass-mode.
 
 BEG, END and LEN according to the expected format of the
 `after-change-functions' hook.
@@ -697,7 +743,9 @@ marks and potentially destroys buffer contents."
         (:comment
          (when (64tass-docblock--is-docblock-line)
            (unless 64tass--inhibit-formatting
-             (64tass-docblock--format-block-at (line-number-at-pos beg)))))))))
+             (64tass-docblock--format-block-at (line-number-at-pos beg)))))
+        (:instruction
+         (64tass--enforce-column-layout))))))
 
 (defconst 64tass-mode-map
   (let ((map (make-sparse-keymap)))
@@ -722,6 +770,7 @@ marks and potentially destroys buffer contents."
   (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
   (setq-local eldoc-documentation-function #'64tass-eldoc-function)
 
+  (add-hook 'before-change-functions #'64tass--before-change-function nil t)
   (add-hook 'after-change-functions #'64tass--after-change-function nil t)
 
   (add-hook 'xref-backend-functions #'64tass-xref-backend nil t)

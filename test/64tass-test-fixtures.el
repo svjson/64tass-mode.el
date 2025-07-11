@@ -42,15 +42,23 @@ Enable `64tass-mode`, then run BODY."
            (with-temp-buffer
              (setq-local font-lock-mode nil)
              (insert ,content)
-             (64tass-mode)
              (goto-char (point-min))
              (when (search-forward "▮" nil t)
                (delete-char -1))
+             (64tass-mode)
              ,@body))
        ;; Restore original settings
        ,@(mapcar (lambda (pair)
                    `(setf ,(car pair) (cdr (assoc ',(car pair) original-settings))))
                  settings))))
+
+(defun sim-type-key (keychar)
+  (let ((last-command-event keychar))
+    (call-interactively #'self-insert-command)))
+
+(defun sim-type-backspace ()
+  (let ((last-command-event 127))
+    (call-interactively #'backward-delete-char)))
 
 (provide '64tass-test-fixtures)
 
