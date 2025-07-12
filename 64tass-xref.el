@@ -62,7 +62,11 @@
          (value (plist-get segment :value)))
     (pcase segment-type
       (:operand
-       (car (split-string value "[ \\+\\,]" t)))
+       (let* ((stripped (car (split-string value "[ \\+\\,]" t)))
+              (number (64tass-parse-number (string-replace "#" "" stripped))))
+         (cond
+          (number stripped)
+          (t (replace-regexp-in-string "[#<>]" "" stripped)))))
 
       (_ value))))
 

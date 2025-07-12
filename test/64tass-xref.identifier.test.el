@@ -86,6 +86,51 @@
                   "colram_ptr"))))
 
 
+(ert-deftest xref-identifier-at-point--lda-with-hi-and-lo-byte ()
+  (with-cursor-in-64tass-mode-buffer
+   nil
+   "
+          lda #<tetr▮onimo_data
+          sta $24
+          lda #>tetronimo_data
+          sta $25
+"
+   (should (equal (64tass-xref--identifier-at-point)
+                  "tetronimo_data"))
+
+   (forward-line 1)
+   (forward-line 1)
+   (move-to-column 20)
+   (should (equal (64tass-xref--identifier-at-point)
+                  "tetronimo_data"))))
+
+(ert-deftest xref-identifier-at-point--numbers-and-formats ()
+  (with-cursor-in-64tass-mode-buffer
+   nil
+   "
+          lda $▮d010
+          sta $24
+          lda #$ff
+          sta %00100101
+"
+   (should (equal (64tass-xref--identifier-at-point)
+                  "$d010"))
+
+   (forward-line 1)
+   (move-to-column 15)
+   (should (equal (64tass-xref--identifier-at-point)
+                  "$24"))
+
+   (forward-line 1)
+   (move-to-column 15)
+   (should (equal (64tass-xref--identifier-at-point)
+                  "#$ff"))
+
+   (forward-line 1)
+   (move-to-column 15)
+   (should (equal (64tass-xref--identifier-at-point)
+                  "%00100101"))))
+
 
 
 ;;; 64tass-xref.identifier.test.el ends here
