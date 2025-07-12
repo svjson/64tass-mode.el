@@ -43,7 +43,7 @@
 
 (package-install 'dash)
 
-;; Add root and test directores to load-path
+;; Add root and test directories to load-path
 (message (expand-file-name "." default-directory))
 (message (expand-file-name "./test" default-directory))
 
