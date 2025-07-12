@@ -79,6 +79,10 @@
   "Return the identifier at point in 64tass source code."
   (64tass-xref--identifier-at-point))
 
+(cl-defmethod xref-backend-apropos ((_backend (eql 64tass)) pattern)
+  "Simplistic exact-match-only apropos backend for PATTERN."
+  (64tass-xref--find-definitions pattern))
+
 (provide '64tass-xref)
 
 ;;; 64tass-xref.el ends here
