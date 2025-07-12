@@ -875,6 +875,17 @@ marks and potentially destroys buffer contents."
         (:instruction
          (64tass--enforce-column-layout))))))
 
+(defun 64tass--imenu-create-index ()
+  "Return an Imenu index for labels in the current buffer."
+  (64tass-xref--query-definition-sources
+   nil
+   (lambda (entries _)
+     (cl-loop for (label . entry) in entries
+              for pos = (or (plist-get entry :pos)
+                            (64tass-xref--resolve-pos
+                             (plist-get entry :line)))
+              collect (cons label pos)))))
+
 (defconst 64tass-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
@@ -899,6 +910,7 @@ marks and potentially destroys buffer contents."
   (setq-local 64tass-proc-on-assembly-success-function 64tass-on-assembly-success-function)
   (setq-local 64tass-proc-on-assembly-error-function 64tass-on-assembly-error-function)
   (setq-local eldoc-documentation-function #'64tass-eldoc-function)
+  (setq-local imenu-create-index-function #'64tass--imenu-create-index)
 
   (add-hook 'before-change-functions #'64tass--before-change-function nil t)
   (add-hook 'after-change-functions #'64tass--after-change-function nil t)

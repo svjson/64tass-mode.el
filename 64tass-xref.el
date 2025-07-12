@@ -99,6 +99,13 @@ entry, if any."
 
 ;; Utility
 
+(defun 64tass-xref--resolve-pos (line &optional buffer)
+  "Resolve the buffer position of LINE in BUFFER or current buffer."
+  (with-current-buffer (or buffer (current-buffer))
+    (save-excursion
+      (64tass--goto-line line)
+      (point))))
+
 (defun 64tass-xref--make-xref (entry identifier)
   "Make xref struct from index ENTRY and IDENTIFIER."
   (let* ((file (when-let ((file-name (plist-get entry :file)))
@@ -111,10 +118,7 @@ entry, if any."
     (xref-make identifier
                (if buffer
                    (xref-make-buffer-location buffer (or pos
-                                                         (with-current-buffer buffer
-                                                           (save-excursion
-                                                             (64tass--goto-line line)
-                                                             (point)))))
+                                                         (64tass-xref--resolve-pos line buffer)))
                  (xref-make-file-location file
                                           (or line
                                               (with-temp-buffer
