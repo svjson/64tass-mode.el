@@ -1,4 +1,4 @@
-;;; 64tass-mode.parse-line.test.el --- summary -*- lexical-binding: t -*-
+;;; 64tass-parse.parse-line.test.el --- summary -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Sven Johansson
 

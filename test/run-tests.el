@@ -65,6 +65,7 @@
 (load "64tass-mode.line-editing.test.el")
 (load "64tass-parse.parse-line.test.el")
 (load "64tass-parse.column-bounds.test.el")
+(load "64tass-xref.identifier.test.el")
 
 (ert-run-tests-batch-and-exit)
 

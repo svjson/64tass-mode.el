@@ -52,13 +52,19 @@
   "Find and return the identifier at point, if any."
   (let* ((parsed (64tass--parse-line))
          (col (current-column))
-         (segment (cl-loop for (key value) on parsed by #'cddr
-                           when (progn
-                                  (and (listp value)
-                                       (>= col (plist-get value :begin))
-                                       (<= col (plist-get value :end))))
-                           return key)))
-    (plist-get (plist-get parsed segment) :value)))
+         (segment-type (cl-loop for (key value) on parsed by #'cddr
+                                when (progn
+                                       (and (listp value)
+                                            (>= col (plist-get value :begin))
+                                            (<= col (plist-get value :end))))
+                                return key))
+         (segment (plist-get parsed segment-type))
+         (value (plist-get segment :value)))
+    (pcase segment-type
+      (:operand
+       (car (split-string value "[ \\+\\,]" t)))
+
+      (_ value))))
 
 (cl-defmethod xref-backend-definitions ((_backend (eql 64tass)) identifier)
   "Find definitions for IDENTIFIER in the 64tass source code."
