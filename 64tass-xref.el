@@ -59,7 +59,8 @@
                                             (<= col (plist-get value :end))))
                                 return key))
          (segment (plist-get parsed segment-type))
-         (value (plist-get segment :value)))
+         (value (or (plist-get segment :value)
+                    (thing-at-point 'symbol t))))
     (pcase segment-type
       (:operand
        (let* ((stripped (car (split-string value "[ \\+\\,]" t)))

@@ -131,6 +131,27 @@
    (should (equal (64tass-xref--identifier-at-point)
                   "%00100101"))))
 
+(ert-deftest xref-identifier-at-point--label-definition ()
+  (with-cursor-in-64tass-mode-buffer
+   nil
+   "
+main▮loop    lda $d010
+            sta $24
+"
+   (should (equal (64tass-xref--identifier-at-point)
+                  "mainloop"))))
+
+(ert-deftest xref-identifier-at-point--inline-label--directive ()
+  (with-cursor-in-64tass-mode-buffer
+   nil
+   "
+bat▮_tilt_spr_ptr .byte $83, $82, $81, $84, $85
+
+"
+   (should (equal (64tass-xref--identifier-at-point)
+                  "bat_tilt_spr_ptr"))))
+
+
 
 
 ;;; 64tass-xref.identifier.test.el ends here
