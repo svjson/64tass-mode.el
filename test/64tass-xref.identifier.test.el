@@ -20,7 +20,7 @@
 
 ;;; Commentary:
 
-;; Tests for `64tass--identifier-at-point'.
+;; Tests for `64tass-xref--identifier-at-point'.
 
 ;;; Code:
 

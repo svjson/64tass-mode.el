@@ -182,7 +182,7 @@ a, presumably temporary, buffer containing the label file contents."
                      (buffer-substring (line-beginning-position) (line-end-position))
                      "[:=]" t "\\s-")))
           (push (cons (nth 3 line) (list :file (car line)
-                                         :linum (nth 1 line)
+                                         :linum (string-to-number (nth 1 line))
                                          :addr (nth 4 line)))
                 index))
         (forward-line 1))
