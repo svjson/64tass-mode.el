@@ -163,6 +163,10 @@ tass64-mode buffers."
      (1 font-lock-type-face)
      (2 'bold))
 
+    ;; Comment
+    (,64tass-comment-regex
+     (1 font-lock-comment-face))
+
     ;; Hi/Lo ref
     (,(concat "\\#[\\>\\<]" 64tass-symbol-regex) . font-lock-function-name-face)
 
@@ -171,10 +175,6 @@ tass64-mode buffers."
 
     ;; Highlight opcodes with optimized regexp for all valid 6502/6510 opcodes, including illegal/undocumented opcodes
     (,(concat "[[:blank:]]+" 64tass-6502-opcode-regex) 0 font-lock-keyword-face)
-
-    ;; Comment line
-    (,64tass-comment-regex
-     (1 font-lock-comment-face))
 
     ;; Opcode argument value
     (,64tass-6502-opcode-regex "\\#[\\$\\%]\\(?:[0-9a-fA-F]+\\)" nil nil (0 'bold))
