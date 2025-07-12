@@ -245,7 +245,9 @@ myconstant = $04    ;; Very important▮
    (should (equal (64tass--column-bounds)
                   (list :line-number 2
                         :line-type :directive
-                        :columns (list (list :bounds (cons 0 9)
+                        :columns (list (list :bounds (cons 0 0)
+                                             :type :label)
+                                       (list :bounds (cons 0 9)
                                              :type :directive
                                              :content ".byte $ff")
                                        (list :bounds (cons 9 9)

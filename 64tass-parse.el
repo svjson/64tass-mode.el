@@ -34,7 +34,7 @@
 (defconst 64tass-line-type-cycle-segments
   '((:assembly-address  :address :comment)
     (:blank             :label :opcode :comment)
-    (:directive         :directive :comment)
+    (:directive         :label :directive :comment)
     (:instruction       :label :opcode :comment)
     (:label             :label-standalone :comment)
     (:constant          :constant :comment)
@@ -87,6 +87,14 @@
        (list :type :directive
              :directive (64tass--span 1 str)
              :args (64tass--span 2 str))))
+
+    (:directive
+     "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-+\\(\\.[a-z]+\\)\\s-+\\([^;]*\\)"
+     (lambda (str)
+       (list :type :directive
+             :label (64tass--span 1 str)
+             :directive (64tass--span 2 str)
+             :args (64tass--span 3 str))))
 
     ;; Instruction: label + opcode [+ operand]
     (:instruction

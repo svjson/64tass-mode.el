@@ -30,7 +30,7 @@
 
 
 
-; :type :instruction
+;; Line-type - :instruction
 
 (ert-deftest align-and-cycle--instruction-with-comment--no-precedent ()
   (with-cursor-in-64tass-mode-buffer
@@ -101,7 +101,7 @@
 
 
 
-; :type :blank
+;; Line-type - :blank
 
 (ert-deftest align-and-cycle--blank-line--cycles-through-precedent-columns ()
   (with-cursor-in-64tass-mode-buffer
@@ -151,7 +151,7 @@
 
 
 
-; :type :label
+;; Line-type - :label
 
 (ert-deftest align-and-cycle--inline-label-typed--cycle-to-instruction ()
   (with-cursor-in-64tass-mode-buffer
@@ -173,9 +173,49 @@ mainloop▮"
    (should (equal (64tass--current-line) "mainloop"))
    (should (equal (current-column) 0))))
 
+
+;; Line-type - :directive
+
+(ert-deftest align-and-cycle--multi-byte-directive--cycle-segments ()
+  (with-cursor-in-64tass-mode-buffer
+   ((64tass-left-margin-indent . 0)
+    (64tass-instruction-column-indent . 16)
+    (64tass-comment-column-indent . 30))
+   "*=$0810
+
+▮.byte $00, $04, $0f, $03"
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) ".byte $00, $04, $0f, $03      "))
+   (should (equal (current-column) 30))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) ".byte $00, $04, $0f, $03"))
+   (should (equal (current-column) 0))))
+
+
+(ert-deftest align-and-cycle--multi-byte-directive-with-label--cycle-segments ()
+  (with-cursor-in-64tass-mode-buffer
+   ((64tass-left-margin-indent . 0)
+    (64tass-instruction-column-indent . 16)
+    (64tass-comment-column-indent . 30))
+   "*=$0810
+
+▮chr_props .byte $00, $04, $0f, $03"
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "chr_props .byte $00, $04, $0f, $03"))
+   (should (equal (current-column) 10))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "chr_props .byte $00, $04, $0f, $03 "))
+   (should (equal (current-column) 35))
+
+   (64tass-align-and-cycle)
+   (should (equal (64tass--current-line) "chr_props .byte $00, $04, $0f, $03"))
+   (should (equal (current-column) 00))))
+
 
 
-; :type :comment
+;; Line-type - :comment
 
 (ert-deftest align-and-cycle--comment-line--toggle-comment-column ()
   (with-cursor-in-64tass-mode-buffer

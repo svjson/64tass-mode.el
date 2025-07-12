@@ -163,6 +163,20 @@
                                    :begin 6
                                    :end 9)))))
 
+(ert-deftest parse-line--directive--single-byte--with-label ()
+  (should (equal (64tass--parse-line "max_val .byte $ff")
+                 (list :type :directive
+                       :label (list :value "max_val"
+                                    :begin 0
+                                    :end 7)
+                       :directive (list :value ".byte"
+                                        :begin 8
+                                        :end 13)
+                       :args (list :value "$ff"
+                                   :begin 14
+                                   :end 17)))))
+
+
 
 ;; Instruction
 

@@ -386,15 +386,22 @@ It returns a plist with contextual hints for next and previous contexts, which
 is used for cycling behavior."
   (let* ((column (or column (current-column)))
          (type (plist-get parsed-line :type))
-         (segments (alist-get type 64tass-line-type-cycle-segments))
+         (all-segments (alist-get type 64tass-line-type-cycle-segments))
          (positions
-          (cl-loop for segment in segments
+          (cl-loop with result = '()
+                   for segment in (reverse all-segments)
                    for pos = (or (-> parsed-line
                                      (plist-get segment)
                                      (plist-get :begin))
                                  (64tass--resolve-local-indent-for segment))
-                   when (numberp pos)
-                   collect (cons segment pos)))
+                   when (and (numberp pos)
+                             (not (alist-get pos result)))
+                   do (push (cons pos segment) result)
+                   finally return (mapcar
+                                   (lambda (entry)
+                                     (cons (cdr entry) (car entry)))
+                                   result)))
+         (segments (mapcar #'car positions))
          (segment-count (length segments))
          (current-index
           (or (cl-find-if (lambda (i)
