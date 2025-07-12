@@ -84,10 +84,10 @@ to provide suitable handler functions for its purposes."
   :type 'function
   :group '64tass)
 
-
-
-;; Constants
-(defconst 64tass-proc--assembly-log-buffer-name "*64tass assembly log*")
+(defcustom 64tass-proc-log-buffer-name "*64tass assembly log*"
+  "Name of the assembly log buffer."
+  :type 'string
+  :group '64tass)
 
 
 
@@ -98,14 +98,6 @@ to provide suitable handler functions for its purposes."
   (or 64tass-proc-output-file
       (concat (file-name-sans-extension source-file)
               (or 64tass-proc-output-file-extension ".prg"))))
-
-(defun 64tass-proc-assembly-log-other-window (&rest _)
-  "Open the assembly log in `other-window'.
-
-Accepts and ignores any number of arguments, to make the function compatible
-for use as `64tass-proc-on-assembly-success-function' and/or
-`64tass-proc-on-assembly-error-function'."
-  (switch-to-buffer-other-window 64tass-proc--assembly-log-buffer-name))
 
 (defun 64tass-proc--parse-assembly-output (output)
   "Parse 64tass assembler OUTPUT string into structured data."
@@ -195,7 +187,62 @@ a, presumably temporary, buffer containing the label file contents."
     (64tass--parse-label-dump-buffer)))
 
 
+;; Log
+
+(defun 64tass-proc-assembly-log-other-window (&rest _)
+  "Open the assembly log in `other-window'.
+
+Accepts and ignores any number of arguments, to make the function compatible
+for use as `64tass-proc-on-assembly-success-function' and/or
+`64tass-proc-on-assembly-error-function'."
+  (switch-to-buffer-other-window 64tass-proc-log-buffer-name))
+
+(defun 64tass-proc--append-to-log (output &optional log-buffer-name)
+  "Append OUTPUT to the 64tass log buffer.
+
+LOG-BUFFER-NAME may be passed to override the default log buffer."
+  (with-current-buffer (get-buffer-create (or log-buffer-name
+                                              64tass-proc-log-buffer-name))
+    (special-mode)
+    (let ((inhibit-read-only t))
+      (goto-char (point-max))
+      (insert (string-join (list "\n"
+                                 "-- "
+                                 (time-stamp-string "%:y-%02m-%02d %02H:%02M:%02S")
+                                 " -----------------\n")
+                           ""))
+      (insert output))))
+
+
+
 ;; 64tass interaction
+
+;;;###autoload
+(defun 64tass-exec (args &optional include-proc-args append-to-log)
+  "Invoke the `64tass` binary with ARGS and return exit code and console output.
+
+Returns (<exit-code> . <console-output>).
+
+The default process arguments defined in `64tass-proc-args' are prepended to the
+supplied argument list for non-nil values of INCLUDE-PROC-ARGS.
+
+If a non-nil value is passed for APPEND-TO-LOG, the console output of the
+execution is added to a log buffer.  If the value is a string, this value will
+be used for the buffer name, otherwise the default log buffer name defined by
+64tass-proc--log-buffer-name will be used."
+  (with-temp-buffer
+    (let* ((args (if include-proc-args
+                     (append 64tass-proc-args args)
+                   args))
+           (exit-code (apply #'call-process (executable-find "64tass")
+                             nil
+                             (current-buffer)
+                             nil
+                             args))
+           (console-output (buffer-string)))
+      (when append-to-log
+        (64tass-proc--append-to-log console-output (when (stringp append-to-log) append-to-log)))
+      (cons exit-code console-output))))
 
 ;;;###autoload
 (defun 64tass-assemble-buffer ()
@@ -204,57 +251,37 @@ a, presumably temporary, buffer containing the label file contents."
 Uses `64tass-proc-output-file` and `64tass-proc-args` to determine the
 file name of the output."
   (interactive)
-  (let ((invoking-buffer (current-buffer))
-        (source-buffer-file buffer-file-name))
-    (with-temp-buffer
-      (let* ((output-file (64tass-proc-output-filename source-buffer-file))
-             (args (append 64tass-proc-args (list source-buffer-file "-o" output-file)))
-             (result (apply #'call-process "64tass"
-                            nil
-                            (current-buffer)
-                            nil
-                            args))
-             (output-str (buffer-string))
-             (assembly-output (64tass-proc--parse-assembly-output output-str)))
-        (with-current-buffer (get-buffer-create 64tass-proc--assembly-log-buffer-name)
-          (special-mode)
-          (let ((inhibit-read-only t))
-            (goto-char (point-max))
-            (insert (string-join (list "\n"
-                                       "-- "
-                                       (time-stamp-string "%:y-%02m-%02d %02H:%02M:%02S")
-                                       " -----------------\n")
-                                 ""))
-            (insert output-str)))
-        (with-current-buffer invoking-buffer
-          (if (not (= 0 result))
-              (let ((first-error (-> assembly-output (plist-get :errors) (car))))
-                (when 64tass-proc-on-assembly-error-function
-                  (funcall 64tass-proc-on-assembly-error-function assembly-output first-error)))
-            (when 64tass-proc-on-assembly-success-function
-              (funcall 64tass-proc-on-assembly-success-function assembly-output))))
-        assembly-output))))
+  (let* ((output-file (64tass-proc-output-filename buffer-file-name))
+         (exec-result (64tass-exec
+                       (list buffer-file-name "-o" output-file)
+                       t t))
+         (console-output (cdr exec-result)))
+    (let ((exit-code (car exec-result))
+          (assembly-output (64tass-proc--parse-assembly-output console-output)))
+      (if (not (zerop exit-code))
+          (let ((first-error (-> assembly-output (plist-get :errors) (car))))
+            (when 64tass-proc-on-assembly-error-function
+              (funcall 64tass-proc-on-assembly-error-function assembly-output first-error)))
+        (when 64tass-proc-on-assembly-success-function
+          (funcall 64tass-proc-on-assembly-success-function assembly-output)))
+      assembly-output)))
 
+;;;###autoload
 (defun 64tass-dump-labels ()
   "Invoke 64tass to dump labels for the source in the current buffer."
   (let* ((source-buffer-file buffer-file-name)
          (tmp-dir (make-temp-file "64tass-labels-" t))
-         (label-file (expand-file-name "labels.out" tmp-dir)))
-    (with-temp-buffer
-      (let* ((args (append 64tass-proc-args
-                           (list source-buffer-file
-                                 "--no-output"
-                                 "--dump-labels"
-                                 "-l"
-                                 label-file)))
-             (result (apply #'call-process "64tass"
-                            nil
-                            (current-buffer)
-                            nil
-                            args))
-             (label-index (when (zerop result) (64tass--parse-label-dump-file label-file))))
-        (delete-directory tmp-dir t)
-        label-index))))
+         (label-file (expand-file-name "labels.out" tmp-dir))
+         (result (64tass-exec
+                    (list source-buffer-file
+                          "--no-output"
+                          "--dump-labels"
+                          "-l"
+                          label-file)
+                    t nil))
+         (label-index (when (zerop (car result)) (64tass--parse-label-dump-file label-file))))
+    (delete-directory tmp-dir t)
+    label-index))
 
 (provide '64tass-proc)
 

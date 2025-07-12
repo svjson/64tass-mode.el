@@ -10,6 +10,21 @@ by any package that whishes to do so, without depending on `64tass-mode.el`.
 
 ## Functions of interest
 
+### `64tass-exec`
+
+General-purpose function for invoking the 64tass binary.
+Returns a cons cell of the exit code and the console output.
+
+```elisp
+(64tass-exec '("myprog.asm" "-o" "myprog.prg") t t)
+```
+
+*Arguments:*  
+0 `args` - list of string - command arguments  
+1 `include-proc-args` - boolean - prepend default arguments when non-nil  
+2 `append-to-log` - boolean/string - non-nil appends to log buffer, string overrides buffer name  
+
+
 ### `64tass-assemble-buffer`
 
 Invokes the `64tass` binary to assemble the current buffer and write the output to a file.
@@ -138,6 +153,13 @@ encountered is passed as the second argument. The full error information is avai
 the first argument.
 
 See `64tass-assemble-function` for the argument format.
+
+### `64tass-proc-log-buffer-name`
+
+**Type**: `string`  
+**Default**: `"*64tass assembly log*"`  
+
+Name of the log buffer where console output ends up.
 
 
 ## License
