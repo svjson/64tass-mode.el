@@ -167,10 +167,37 @@ for use as `64tass-proc-on-assembly-success-function' and/or
     (setq result (plist-put result :segments (nreverse segments)))
     result))
 
+
+;; Dump output
+
+(defun 64tass--parse-label-dump-buffer ()
+  "Parse label dump output in the current buffer.
+
+This function expects to be called with the current buffer set to
+a, presumably temporary, buffer containing the label file contents."
+  (goto-char (point-min))
+    (let (index)
+      (while (not (eobp))
+        (let ((line (string-split
+                     (buffer-substring (line-beginning-position) (line-end-position))
+                     "[:=]" t "\\s-")))
+          (push (cons (nth 3 line) (list :file (car line)
+                                         :linum (nth 1 line)
+                                         :addr (nth 4 line)))
+                index))
+        (forward-line 1))
+      index))
+
+(defun 64tass--parse-label-dump-file (label-file)
+  "Parse label dump file on disk at location LABEL-FILE."
+  (with-temp-buffer
+    (insert-file-contents label-file)
+    (64tass--parse-label-dump-buffer)))
 
 
 ;; 64tass interaction
 
+;;;###autoload
 (defun 64tass-assemble-buffer ()
   "Send the current buffer to 64tass for assembly.
 
@@ -207,6 +234,27 @@ file name of the output."
             (when 64tass-proc-on-assembly-success-function
               (funcall 64tass-proc-on-assembly-success-function assembly-output))))
         assembly-output))))
+
+(defun 64tass-dump-labels ()
+  "Invoke 64tass to dump labels for the source in the current buffer."
+  (let* ((source-buffer-file buffer-file-name)
+         (tmp-dir (make-temp-file "64tass-labels-" t))
+         (label-file (expand-file-name "labels.out" tmp-dir)))
+    (with-temp-buffer
+      (let* ((args (append 64tass-proc-args
+                           (list source-buffer-file
+                                 "--no-output"
+                                 "--dump-labels"
+                                 "-l"
+                                 label-file)))
+             (result (apply #'call-process "64tass"
+                            nil
+                            (current-buffer)
+                            nil
+                            args))
+             (label-index (when (zerop result) (64tass--parse-label-dump-file label-file))))
+        (delete-directory tmp-dir t)
+        label-index))))
 
 (provide '64tass-proc)
 

@@ -59,13 +59,15 @@ depend on the full 64tass-mode.el major mode.
 
 ## Custom variables
 
-| Variable                              | Default | Description                                                                             |
-|---------------------------------------|---------|-----------------------------------------------------------------------------------------|
-| `64tass-instruction-column-indent`    | `20`    | indent-level for assembly instructions                                                  |
-| `64tass-comment-column-indent`        | `40`    | indent-level for trailing/right-margin comments                                         |
-| `64tass-on-assembly-success-function` | \<fn>   | Callback to invoke upon successful assembly. Defaults to `64tass--on-assembly-success`. |
-| `64tass-on-assembly-error-function`   | \<fn>   | Callback to invoke upon assembly error. Defaults to `64tass--on-assembly-error`.        |
-| `64tass-label-format-function`        | \<fn>   | Determines label-style/format based on context. Defaults to `64tass-default-label-format-function`.                                                                                        |
+| Variable                              | Type   | Description                                                                                         |
+|---------------------------------------|--------|-----------------------------------------------------------------------------------------------------|
+| `64tass-instruction-column-indent`    | `20`   | indent-level for assembly instructions                                                              |
+| `64tass-comment-column-indent`        | `40`   | indent-level for trailing/right-margin comments                                                     |
+| `64tass-on-assembly-success-function` | \<fn>  | Callback to invoke upon successful assembly. Defaults to `64tass--on-assembly-success`.             |
+| `64tass-on-assembly-error-function`   | \<fn>  | Callback to invoke upon assembly error. Defaults to `64tass--on-assembly-error`.                    |
+| `64tass-label-format-function`        | \<fn>  | Determines label-style/format based on context. Defaults to `64tass-default-label-format-function`. |
+| `64tass-xref-definition-source-order` | 'list  | Determines in which order sources/handlers will be invoked to find xref definitions                 |
+| `64tass-xref-definition-source-alist` | 'alist | An alist containing (\<source symbol> . \<handler-function>) entries.                               |
 
 
 ## License

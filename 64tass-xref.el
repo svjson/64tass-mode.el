@@ -27,15 +27,77 @@
 (require 'cl-lib)
 (require 'xref)
 (require '64tass-parse)
+(require '64tass-proc)
 
 
+;; Custom variables
+
+(defcustom 64tass-xref-definition-source-order '(64tass buffer)
+  "Search order by which the 64tass-mode xref backend obtains symbol definitions.
+
+The default search order is:
+1. ''64tass - Performs a label dump using the 64tass binary and creates
+   an index from its output.
+2. ''buffer - Performs a scan of the current buffer.
+
+64tass requires the source files to be in a valid state to be able to perform
+a label dump, whereas the buffer scan does not.  For any label lookup, 64tass
+is the more performant option and should always succeed unless there are
+assembly errors, in which the somewhat slower buffer-scan works as a
+good-enough fallback."
+  :type '(repeat (choice
+                  (const 64tass)
+                  (const buffer)
+                  (symbol :tag "Custom provider")))
+  :group '64tass)
+
+(defcustom 64tass-xref-definition-source-alist `((64tass . ,#'64tass-xref--64tass-definitions)
+                                                 (buffer . ,#'64tass-xref--buffer-definitions))
+  "Function handlers for find-definition sources.
+
+Any symbol appearing in `64tass-xref-definition-source-order' must register a
+handler in this a list in order for it to be pollable."
+  :type '(alist :key-type (symbol :tag "Source")
+                :value-type (function :tag "Handler"))
+  :group '64tass)
+
+
+;; 64tass xref backend
 
 (defun 64tass-xref-backend ()
   "Return the xref backend for 64tass."
   '64tass)
 
 (defun 64tass-xref--find-definitions (identifier)
-  "Find definitions for IDENTIFIER in the 64tass source code."
+  "Find definitions for IDENTIFIER in the current 64tass source buffer."
+  (cl-some
+   (lambda (source-symbol)
+     (let ((handler (alist-get source-symbol 64tass-xref-definition-source-alist)))
+       (if handler
+           (funcall handler identifier)
+         (progn
+           (warn "64tass-xref definition source '%s' is not correctly registered." source-symbol)
+           nil))))
+   64tass-xref-definition-source-order)
+  )
+
+(defun 64tass-xref--64tass-definitions (identifier)
+  "Find definition of IDENTIFIER using a 64tass label dump."
+  (when-let ((entry (alist-get identifier (64tass-dump-labels) nil nil #'string-equal)))
+    (let* ((file (expand-file-name (plist-get entry :file)))
+           (line (string-to-number (plist-get entry :linum)))
+           (buffer (find-buffer-visiting file)))
+      (list
+       (xref-make identifier
+                  (if buffer
+                      (xref-make-buffer-location buffer (with-current-buffer buffer
+                                                          (save-excursion
+                                                            (64tass--goto-line line)
+                                                            (point))))
+                    (xref-make-file-location file line 0)))))))
+
+(defun 64tass-xref--buffer-definitions (identifier)
+  "Find definitions for IDENTIFIER in the current 64tass source buffer."
   (save-excursion
     (goto-char (point-min))
     (let (results)
@@ -47,6 +109,7 @@
                                                     (match-beginning 0)))
               results))
       (nreverse results))))
+
 
 (defun 64tass-xref--identifier-at-point ()
   "Find and return the identifier at point, if any."

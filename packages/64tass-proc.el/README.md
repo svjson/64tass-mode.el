@@ -76,6 +76,22 @@ console output of the 64tass assembly operation into a structured plist format.
              :n 2)))
 ```
 
+### `64tass-dump-labels`
+
+Dumps label definitions for the source file in the current buffer and parses it into an
+alist in a format suitable for label/identifier lookup:
+
+```elisp
+(("clear_screen" . (:file "main.asm" :linum "396" :addr "$0a57"))
+ ("ball_cell_x" . (:file "main.asm" :linum "576" :addr "$0b89"))
+ ("setup_game_mode" . (:file "main.asm" :linum "22" :addr "$081d"))
+ ("read_joystick_port2" . (:file "main.asm" :linum "365" :addr "$0a3f"))
+ ("brick_anim_tick" . (:file "main.asm" :linum "711" :addr "$400f"))
+ ("game_irq_tick" . (:file "main.asm" :linum "93" :addr "$088e"))
+ ("level_1_data" . (:file "main.asm" :linum "681" :addr "$0be4"))
+ ...)
+```
+
 ## Buffer-local variables
 
 ### `64tass-proc-output-file`
