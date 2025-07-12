@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'dash)
 (require '64tass-common)
 
 
@@ -36,6 +37,7 @@
     (:directive         :directive :comment)
     (:instruction       :label :opcode :comment)
     (:label             :label-standalone :comment)
+    (:constant          :constant :comment)
     (:comment           :comment)))
 
 
@@ -43,6 +45,7 @@
   '((:opcode               :opcode " " :operand)
     (:directive            :directive " " :args)
     (:label-standalone     :label-standalone ":")
+    (:constant             :constant "=" :value)
     (:address              -2 "*=" :address)))
 
 
@@ -75,7 +78,7 @@
      "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*=\\s-*\\(.*\\)"
      (lambda (str)
        (list :type :constant
-             :name (64tass--span 1 str)
+             :constant (64tass--span 1 str)
              :value (64tass--span 2 str))))
 
     (:directive
@@ -118,6 +121,77 @@
      ".*"
      (lambda (_)
        (list :type :unknown)))))
+
+(declare-function 64tass--resolve-local-indent-for "64tass-mode.el")
+
+(defun 64tass--column-bounds (&optional parsed-line line)
+  "Return the column bounds of the line at LINE.
+
+Both PARSED-LINE and LINE are optional.  If any of them are provided they
+must refer to the same line in order for the bounds calculation to be correct.
+
+All relevant columns for the line type are included in the result, in order,
+regardless if they are present or not.  If not present, the column entry will
+not have a :content key."
+  (save-excursion
+    (when line
+      (64tass--goto-line line))
+    (when (null parsed-line)
+      (setq parsed-line (64tass--parse-line)))
+    (let* ((line-type (plist-get parsed-line :type))
+           (column-segments (alist-get line-type 64tass-line-type-cycle-segments))
+           (next-present (lambda (from-index)
+                           (cl-some (lambda (seg-type)
+                                      (plist-get parsed-line seg-type))
+                                    (cl-subseq column-segments from-index))))
+           (line-end (- (line-end-position) (line-beginning-position)))
+           (columns
+            (cl-loop for segment-type in column-segments
+                     for i from 0
+                     for line-seg = (plist-get parsed-line segment-type)
+                     for next-type = (nth (1+ i) column-segments)
+                     for next-pres = (funcall next-present (1+ i))
+                     for next-pres-begin = (plist-get next-pres :begin)
+                     for line-comp = (alist-get segment-type 64tass-segment-composition)
+                     collect (let* ((local-def (64tass--resolve-local-indent-for segment-type))
+                                    (begin (or (if-let ((line-seg-begin (plist-get line-seg :begin))
+                                                        (modifier (when (eq 'integer (type-of (car line-comp))) (car line-comp))))
+                                                   (+ modifier line-seg-begin)
+                                                 line-seg-begin)
+                                               (cond ((and local-def next-pres-begin)
+                                                      (min local-def next-pres-begin))
+
+                                                     (local-def (min line-end local-def))
+                                                     (next-pres-begin next-pres-begin))))
+                                    (content (when-let ((seg-content (plist-get line-seg :value)))
+                                               (if-let (line-comp)
+                                                   (string-trim
+                                                    (string-join
+                                                     (cl-remove nil (mapcar
+                                                                     (lambda (comp-seg)
+                                                                       (pcase (type-of comp-seg)
+                                                                         ('string comp-seg)
+                                                                         ('symbol (or (-> parsed-line (plist-get comp-seg) (plist-get :value)) ""))
+                                                                         (_ "")))
+                                                                     line-comp))))
+                                                 seg-content)))
+                                    (content-end (+ begin (length content)))
+                                    (end (let ((seg-end (plist-get line-seg :end))
+                                               (calc-end (let ((next-local-def (when next-type (64tass--resolve-local-indent-for next-type))))
+                                                           (cond ((and next-local-def next-pres-begin)
+                                                                  (min next-local-def next-pres-begin))
+
+                                                                 (next-local-def (min line-end next-local-def))
+                                                                 (next-pres-begin next-pres-begin)
+
+                                                                 (t begin)))))
+                                           (max calc-end content-end))))
+                               (64tass--pruned-plist :bounds (cons begin end)
+                                                     :type segment-type
+                                                     :content (when content (substring (64tass--current-line) begin end)))))))
+      (list :line-number (line-number-at-pos)
+            :line-type line-type
+            :columns columns))))
 
 
 (defun 64tass--comment-start-index (line)

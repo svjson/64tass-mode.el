@@ -29,6 +29,7 @@
 (require '64tass-parse)
 
 
+;; 64tass--symbol-at-point
 
 (ert-deftest symbol-at-point--hex-literal-operand ()
   (with-cursor-in-64tass-mode-buffer
@@ -63,6 +64,30 @@
                   (list :symbol "$7e"
                         :numeric-value 126
                         :numeric-form (list :dec "126" :hex "$7e" :bin "%01111110"))))))
+
+
+;; 64tass--empty-line-p
+
+(ert-deftest empty-line-p--blank-line--no-exceptions ()
+  (should (equal (64tass--empty-line-p (list :type :blank))
+                 t)))
+
+(ert-deftest empty-line-p--blank-line-with-comment--no-exceptions ()
+  (should (equal (64tass--empty-line-p
+                  (list :type :blank
+                        :comment (list :value ";; I ate the last muffin"
+                                       :begin 5
+                                       :end 29)))
+                 nil)))
+
+(ert-deftest empty-line-p--blank-line-with-comment--comment-exception ()
+  (should (equal (64tass--empty-line-p
+                  (list :type :blank
+                        :comment (list :value ";; I ate the last muffin"
+                                       :begin 5
+                                       :end 29))
+                  :comment)
+                 t)))
 
 
 

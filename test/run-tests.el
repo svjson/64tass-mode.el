@@ -61,8 +61,10 @@
 (load "64tass-docblock.line-identification.test.el")
 (load "64tass-mode.align-and-cycle.test.el")
 (load "64tass-mode.resolve-point-context.test.el")
+(load "64tass-mode.shift-column.test.el")
 (load "64tass-mode.line-editing.test.el")
 (load "64tass-parse.parse-line.test.el")
+(load "64tass-parse.column-bounds.test.el")
 
 (ert-run-tests-batch-and-exit)
 

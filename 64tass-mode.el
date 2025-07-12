@@ -67,6 +67,12 @@ indentation.  Left configurable to enable derived work to configure this."
   :type 'integer
   :group '64tass)
 
+(defcustom 64tass-label-format-function #'64tass-default-label-format-function
+  "Determines which label format to use in a given context.
+
+Valid return values are :colon and :bare."
+  :type 'symbol
+  :group '64tass)
 
 (defcustom 64tass-insert-basic-header-comment t
   "Insert BASIC source comment before basic header."
@@ -187,6 +193,35 @@ tass64-mode buffers."
 
 
 ;; Formatting and tab behavior
+
+(defun 64tass-default-label-format-function (parsed-line)
+  "Default implementation of `64tass-label-format-function'.
+
+Determines label-format, :colon or :bare, depending on
+the context given by PARSED-LINE.
+
+By default, 64tass uses the :colon form for standalone labels
+and :bare for inline."
+  (cond
+   ((64tass--empty-line-p parsed-line :label :label-standalone :comment)
+    :colon)
+
+   (t :bare)))
+
+(defun 64tass-ensure-label-format (parsed-line label)
+  "Return LABEL formatted according the context of PARSED-LINE.
+
+The format is determined by the custom variable `64tass-label-format-function'."
+  (let ((trimmed-label (string-trim label))
+        (label-format (funcall 64tass-label-format-function parsed-line)))
+    (pcase label-format
+      (:colon (if (not (string-suffix-p ":" trimmed-label))
+                  (concat trimmed-label ":")
+                trimmed-label))
+      (:bare (string-replace ":" "" trimmed-label))
+
+      (_ trimmed-label))))
+
 
 (defun 64tass-align-current-line (&optional prefer-default)
   "Align the current line to the contextual column settings.
@@ -477,6 +512,107 @@ with the pre-edit dito."
               (insert " ")))))))))
 
 
+; Code transformation
+
+(defun 64tass--replace-column-content (column-bounds column-index new-content)
+  "Replace the content of a column with NEW-CONTENT.
+
+COLUMN-BOUNDS defines the column layout and line number, and COLUMN-INDEX
+specifies the target column.
+
+Returns a cons-cell of (<buffer-column> . <replaced-content>)."
+  (let ((64tass--inhibit-formatting t))
+    (64tass--goto-line (plist-get column-bounds :line-number))
+
+    (let* ((trimmed-content (string-trim new-content))
+           (column-list (plist-get column-bounds :columns))
+           (column (nth column-index column-list))
+           (source-content (string-trim (or (plist-get column :content) "")))
+           (padding (- (length source-content) (length trimmed-content))))
+
+      (move-to-column (car (plist-get column :bounds)))
+
+      (when (null (plist-get column :content))
+        (when (eolp)
+          (let ((target-indent (64tass--resolve-local-indent-for (plist-get column :type))))
+            (cond
+
+             ((> target-indent (current-column))
+              (indent-to target-indent))
+
+             ((not (bolp))
+              (insert " "))))))
+
+      (delete-region (point) (+ (point) (length source-content)))
+      (let ((insert-column (current-column)))
+        (insert trimmed-content)
+        (if (eolp)
+            (delete-horizontal-space)
+          (cond
+           ((cl-plusp padding)
+            (insert (make-string padding ?\s)))
+
+           ((cl-minusp padding)
+            (kill-forward-chars (abs padding)))))
+        (cons insert-column source-content)))))
+
+(defun 64tass--shift-reformat-content (content-type content parsed-line)
+  "Return CONTENT of CONTENT-TYPE formatted according context at PARSED-LINE."
+  (cond
+   ((member content-type '(:label label-standalone))
+    (64tass-ensure-label-format parsed-line content))
+
+   (t content)))
+
+(defun 64tass--shift-column (&optional dir)
+  "Shift the column contents at point vertically in direction DIR.
+
+DIR is either -1(up) or 1(down)."
+  (let* ((dir (or dir 1))
+         (parsed-line (64tass--parse-line))
+         (point-context (64tass--resolve-point-context parsed-line))
+         (column-bounds (64tass--column-bounds parsed-line))
+         (source-column-list (plist-get column-bounds :columns))
+         (column-seg (plist-get point-context :current))
+         (column-index (cl-position column-seg (alist-get (plist-get parsed-line :type) 64tass-line-type-cycle-segments)))
+         (point-offset (- (current-column) (car (plist-get (nth column-index source-column-list) :bounds)))))
+    (forward-line dir)
+    (move-to-column (plist-get point-context :point))
+    (let* ((target-line (64tass--parse-line))
+           (target-bounds (64tass--column-bounds target-line))
+           (target-column-list (plist-get target-bounds :columns))
+           (source-column (nth column-index source-column-list))
+           (source-content (or (plist-get source-column :content) ""))
+           (target-column (nth column-index target-column-list))
+           (target-content (or (plist-get target-column :content) "")))
+
+      (64tass--replace-column-content
+       column-bounds
+       column-index
+       (64tass--shift-reformat-content (plist-get source-column :type)
+                                       target-content
+                                       parsed-line))
+      (let ((replace-op
+             (64tass--replace-column-content
+              target-bounds
+              column-index
+              (64tass--shift-reformat-content (plist-get target-column :type)
+                                              source-content
+                                              target-line))))
+        (move-to-column (+ (car replace-op) point-offset))))))
+
+(defun 64tass-shift-column-up ()
+  "Shift the contents of the column at point up."
+  (interactive)
+  (64tass--shift-column -1))
+
+(defun 64tass-shift-column-down ()
+  "Shift the contents of the column at point down."
+  (interactive)
+  (64tass--shift-column 1))
+
+
+                                        ; Code generation
 
 (defun 64tass-insert-BASIC-header ()
   "Insert a basic program to bootstrap machine language program at cursor."
@@ -733,6 +869,8 @@ marks and potentially destroys buffer contents."
     (define-key map (kbd "C-c C-n") #'64tass-cycle-number-at-point)
     (define-key map (kbd "C-c i h") #'64tass-insert-BASIC-header)
     (define-key map (kbd "C-c i b") #'64tass-docblock--insert-contextual)
+    (define-key map (kbd "s-<up>") #'64tass-shift-column-up)
+    (define-key map (kbd "s-<down>") #'64tass-shift-column-down)
     (define-key map (kbd "<backtab>") #'64tass-deindent)
     (define-key map (kbd "RET") #'64tass-newline)
     map))

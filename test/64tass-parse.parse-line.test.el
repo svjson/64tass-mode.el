@@ -28,6 +28,9 @@
 (require 'ert)
 (require '64tass-mode)
 
+
+;; Comment only
+
 (ert-deftest parse-line--comment-only--line-start ()
   (should (equal (64tass--parse-line ";; I ate the last muffin")
                  (list :type :comment
@@ -35,12 +38,16 @@
                                       :begin 0
                                       :end 24)))))
 
-(ert-deftest parse-line--comment-only--indented ()
+
+;; Blank
+
+(ert-deftest parse-line--blank-with-comment--indented-comment ()
   (should (equal (64tass--parse-line "     ;; I ate the last muffin")
                  (list :type :blank
                        :comment (list :value ";; I ate the last muffin"
                                       :begin 5
                                       :end 29)))))
+
 
 (ert-deftest parse-line--blank--empty-line ()
   (should (equal (64tass--parse-line "")
@@ -49,6 +56,10 @@
 (ert-deftest parse-line--blank--line-with-spaces-and-tabs ()
   (should (equal (64tass--parse-line "   \t   ")
                  (list :type :blank))))
+
+
+
+;; Label
 
 (ert-deftest parse-line--label-standalone ()
   (should (equal (64tass--parse-line "hic_sunt_dracones:")
@@ -67,6 +78,10 @@
                                       :begin 23
                                       :end 36)))))
 
+
+
+;; Assembly address
+
 (ert-deftest parse-line--assembly-address ()
   (should (equal (64tass--parse-line "*=$0801")
                  (list :type :assembly-address
@@ -84,12 +99,16 @@
                                       :begin 8
                                       :end 22)))))
 
+
+
+;; Constant
+
 (ert-deftest parse-line--constant--no-spacing ()
   (should (equal (64tass--parse-line "myconstant=$04")
                  (list :type :constant
-                       :name (list :value "myconstant"
-                                   :begin 0
-                                   :end 10)
+                       :constant (list :value "myconstant"
+                                       :begin 0
+                                       :end 10)
                        :value (list :value "$04"
                                     :begin 11
                                     :end 14)))))
@@ -97,9 +116,9 @@
 (ert-deftest parse-line--constant--spacing ()
   (should (equal (64tass--parse-line "myconstant = $04")
                  (list :type :constant
-                       :name (list :value "myconstant"
-                                   :begin 0
-                                   :end 10)
+                       :constant (list :value "myconstant"
+                                       :begin 0
+                                       :end 10)
                        :value (list :value "$04"
                                     :begin 13
                                     :end 16)))))
@@ -107,9 +126,9 @@
 (ert-deftest parse-line--constant--no-spacing--with-comment ()
   (should (equal (64tass--parse-line "myconstant=$04    ;; Very important")
                  (list :type :constant
-                       :name (list :value "myconstant"
-                                   :begin 0
-                                   :end 10)
+                       :constant (list :value "myconstant"
+                                       :begin 0
+                                       :end 10)
                        :value (list :value "$04"
                                     :begin 11
                                     :end 14)
@@ -120,9 +139,9 @@
 (ert-deftest parse-line--constant--spacing--with-comment ()
   (should (equal (64tass--parse-line "myconstant = $04    ;; Very important")
                  (list :type :constant
-                       :name (list :value "myconstant"
-                                   :begin 0
-                                   :end 10)
+                       :constant (list :value "myconstant"
+                                       :begin 0
+                                       :end 10)
                        :value (list :value "$04"
                                     :begin 13
                                     :end 16)
@@ -130,6 +149,9 @@
                                       :begin 20
                                       :end 37)))))
 
+
+
+;; Directive
 
 (ert-deftest parse-line--directive--single-byte ()
   (should (equal (64tass--parse-line ".byte $ff")
@@ -140,6 +162,9 @@
                        :args (list :value "$ff"
                                    :begin 6
                                    :end 9)))))
+
+
+;; Instruction
 
 (ert-deftest parse-line--label+instruction ()
   (should (equal (64tass--parse-line "mainloop       lda #$ff")
@@ -193,5 +218,6 @@
                                      :begin 15
                                      :end 18)))))
 
-;;; 64tass-parse.parse-line.test.el ends here
+
 
+;;; 64tass-parse.parse-line.test.el ends here

@@ -218,6 +218,13 @@ is provided under the :memory-address key in the return value."
                             :numeric-form (when sym-num (64tass--number-formats sym-num))
                             :memory-address (when mem-addr-p sym-num)))))
 
+(defun 64tass--empty-line-p (parsed-line &rest exceptions)
+  "Return t if PARSED-LINE has 0 segments, apart from EXCEPTIONS."
+  (unless (cl-loop for (key _) on parsed-line by #'cddr
+                   when (and (not (equal key :type))
+                             (not (member key exceptions)))
+                   collect key)
+    t))
 
 
 
