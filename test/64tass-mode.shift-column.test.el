@@ -150,6 +150,22 @@ write_▮irq_rline:
    (should (equal (current-column) 6))
    (should (equal (line-number-at-pos) 1))))
 
+(ert-deftest shift-column-up--inline-label-on-directive--short-column ()
+  (with-cursor-in-64tass-mode-buffer
+   nil
+   "
+ball_latch .byte $08
+brick_▮anim_tick .byte $03
+"
+   (64tass-shift-column-up)
+   (should (equal (buffer-string) "
+brick_anim_tick .byte $08
+ball_latch      .byte $03
+"))
+   (should (equal (current-column) 6))
+   (should (equal (line-number-at-pos) 2)))
+  )
+
 
 
 ;; Shift comments

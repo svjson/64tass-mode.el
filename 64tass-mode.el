@@ -534,6 +534,7 @@ Returns a cons-cell of (<buffer-column> . <replaced-content>)."
     (let* ((trimmed-content (string-trim new-content))
            (column-list (plist-get column-bounds :columns))
            (column (nth column-index column-list))
+           (next-column-start (car (plist-get (nth (1+ column-index) column-list) :bounds)))
            (source-content (string-trim (or (plist-get column :content) "")))
            (padding (- (length source-content) (length trimmed-content))))
 
@@ -549,6 +550,11 @@ Returns a cons-cell of (<buffer-column> . <replaced-content>)."
 
              ((not (bolp))
               (insert " "))))))
+
+      (when next-column-start
+        (let ((end-col (+ (current-column) (length trimmed-content))))
+          (when (> end-col next-column-start)
+            (setq padding (1+ (- padding (- next-column-start end-col)))))))
 
       (delete-region (point) (+ (point) (length source-content)))
       (let ((insert-column (current-column)))
