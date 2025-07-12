@@ -883,7 +883,7 @@ marks and potentially destroys buffer contents."
      (cl-loop for (label . entry) in entries
               for pos = (or (plist-get entry :pos)
                             (64tass-xref--resolve-pos
-                             (plist-get entry :line)))
+                             (plist-get entry :linum)))
               collect (cons label pos)))))
 
 (defconst 64tass-mode-map
