@@ -723,6 +723,29 @@ for which the resolution was performed up until the source line(s)."
 
 ;; Newline and TAB behavior
 
+(defun 64tass--newline-instruction (parsed-line)
+  "Contextual newline handler for :instruction lines.
+
+Requires PARSED-LINE for context."
+  (cond
+   ((or (bolp)
+        (equal (current-column) (-> parsed-line (plist-get :opcode) (plist-get :begin))))
+    (let ((col (current-column)))
+      (newline-and-indent)
+      (move-to-column col)))
+
+   (t
+    (progn (move-end-of-line nil)
+           (newline-and-indent)))))
+
+(defun 64tass--newline-blank ()
+  "Contextual newline handler for :blank lines."
+  (cond
+   ((bolp)
+    (newline))
+
+   (t (newline-and-indent))))
+
 (defun 64tass-newline ()
   "Contextual newline handler for 64tass-mode."
   (interactive)
@@ -733,6 +756,13 @@ for which the resolution was performed up until the source line(s)."
     (cond
      ((64tass-docblock--is-docblock-line)
       (64tass-docblock--newline))
+
+     ((eq line-type :instruction)
+      (64tass--newline-instruction parsed))
+
+     ((eq line-type :blank)
+      (64tass--newline-blank))
+
      ((and (eq line-type :directive)
            (plist-get parsed :args))
       (progn (newline)

@@ -54,18 +54,19 @@
 (add-to-list 'load-path (expand-file-name "./test" default-directory))
 
 ;; Load test files
+(load "64tass-common.buffer-query.test.el")
 (load "64tass-common.number-fns.test.el")
 (load "64tass-common.plist-fns.test.el")
-(load "64tass-common.buffer-query.test.el")
 (load "64tass-docblock.content-extraction.test.el")
 (load "64tass-docblock.line-identification.test.el")
 (load "64tass-mode.align-and-cycle.test.el")
+(load "64tass-mode.imenu.test.el")
+(load "64tass-mode.line-editing.test.el")
+(load "64tass-mode.newline.test.el")
 (load "64tass-mode.resolve-point-context.test.el")
 (load "64tass-mode.shift-column.test.el")
-(load "64tass-mode.line-editing.test.el")
-(load "64tass-mode.imenu.test.el")
-(load "64tass-parse.parse-line.test.el")
 (load "64tass-parse.column-bounds.test.el")
+(load "64tass-parse.parse-line.test.el")
 (load "64tass-xref.buffer-source.test.el")
 (load "64tass-xref.identifier.test.el")
 
