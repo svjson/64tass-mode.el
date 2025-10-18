@@ -59,6 +59,8 @@
 (load "64tass-common.plist-fns.test.el")
 (load "64tass-docblock.content-extraction.test.el")
 (load "64tass-docblock.line-identification.test.el")
+(load "64tass-docblock.parse.test.el")
+(load "64tass-docblock.insert-content.test.el")
 (load "64tass-mode.align-and-cycle.test.el")
 (load "64tass-mode.imenu.test.el")
 (load "64tass-mode.line-editing.test.el")

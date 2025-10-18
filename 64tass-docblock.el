@@ -210,7 +210,16 @@ LINE is optional, and if omitted the search starts from the current line"
       :block))))
 
 (defun 64tass-docblock--parse-docblock (&optional line-number)
-  "Parse the docblock at LINE-NUMBER into a structured list."
+  "Parse the docblock at LINE-NUMBER into a structured list.
+
+The parsed docblock format is as follows:
+
+ (:bounds (<linestart> . <lineend>)
+  :sections ((:type function-header
+              :bounds (<linestart> . <lineend>)
+              :content (<line content> <line content>...))))
+
+Returns nil if there is no docblock at the given line number."
   (save-excursion
     (let ((block-bounds (64tass-docblock--block-bounds line-number)))
       (when (car block-bounds)
@@ -408,16 +417,17 @@ Optionally pass a pre-parsed BLOCK."
       (64tass--goto-line line))
     (let* ((block (or block (64tass-docblock--parse-docblock)))
            (current-section nil))
-      (while (and (null current-section)
-                  (>= (line-number-at-pos) (car (plist-get block :bounds))))
-        (when-let ((section (cl-find-if
-                             (lambda (section)
-                               (and
-                                (>= (line-number-at-pos) (car (plist-get section :bounds)))
-                                (<= (line-number-at-pos) (cdr (plist-get section :bounds)))))
-                             (plist-get block :sections))))
-          (setq current-section section))
-        (forward-line -1))
+      (when block
+        (while (and (null current-section)
+                    (>= (line-number-at-pos) (car (plist-get block :bounds))))
+          (when-let ((section (cl-find-if
+                               (lambda (section)
+                                 (and
+                                  (>= (line-number-at-pos) (car (plist-get section :bounds)))
+                                  (<= (line-number-at-pos) (cdr (plist-get section :bounds)))))
+                               (plist-get block :sections))))
+            (setq current-section section))
+          (forward-line -1)))
       current-section)))
 
 (defun 64tass-docblock--goto-next-section (&optional dir)
