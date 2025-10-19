@@ -45,7 +45,6 @@ game_tick:
                     adc $d000
                     sta $d000
 "
-   (message (buffer-string))
    (64tass-newline)
    (should (equal (buffer-string)
                   "
@@ -75,7 +74,6 @@ game_tick:
                     adc $d000
                     sta $d000
 "
-   (message (buffer-string))
    (64tass-newline)
    (should (equal (buffer-string)
                   "
@@ -105,7 +103,6 @@ game_tick:
                     adc $d000
                     sta $d000
 "
-   (message (buffer-string))
    (64tass-newline)
    (should (equal (buffer-string)
                   "
@@ -132,7 +129,6 @@ game_tick:
 ▮
 
 "
-   (message (buffer-string))
    (64tass-newline)
    (should (equal (buffer-string)
                   "
