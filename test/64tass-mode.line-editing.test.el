@@ -124,6 +124,25 @@
                         :operand '(:value "#$e7" :begin 14 :end 18)
                         :comment '(:value "; Set sprite #1 Y-position" :begin 23 :end 49))))))
 
+(ert-deftest line-edit--erase-backwards-additional-space-between-instr-and-label ()
+  (with-cursor-in-64tass-mode-buffer
+   ((64tass-left-margin-indent . 0)
+    (64tass-instruction-column-indent . 16)
+    (64tass-comment-column-indent . 30))
+   "*=$2000
+
+main:
+                jsr read_joystick
+
+                bcs  ▮check_movement
+"
+   (should (equal (64tass--current-line) "                bcs  check_movement"))
+   (should (equal (current-column) 21))
+
+   (sim-type-backspace)
+   (should (equal (64tass--current-line) "                bcs check_movement"))))
+
+
 
 
 ;;; 64tass-mode.line-editing.test.el ends here

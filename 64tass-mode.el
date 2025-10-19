@@ -505,18 +505,25 @@ with the pre-edit dito."
                                      (< (plist-get seg :begin) (plist-get next-seg :begin))))
                         (setq next-seg seg)
                         (setq next-type key))))
-        (when-let ((new-seg (plist-get after next-type))
-                   (before-begin (plist-get next-seg :begin))
-                   (after-begin (plist-get new-seg :begin)))
-          (save-excursion
-            (move-to-column after-begin)
-            (cond
+        ;; FIXME: This (when...) is a hack that only solves the opcode<->operand relationship
+        ;;        A proper solution would either have the parsed line be properly divided into
+        ;;        the three main columns, or there needs to be a lookup so that we only really
+        ;;        care about adjusting the start of the next column.
+        (when (or (not (equal :operand next-type))
+                  (not (and (equal :operand next-type)
+                            (> (current-column) (plist-get (plist-get after :opcode) :end)))))
+          (when-let ((new-seg (plist-get after next-type))
+                     (before-begin (plist-get next-seg :begin))
+                     (after-begin (plist-get new-seg :begin)))
+            (save-excursion
+              (move-to-column after-begin)
+              (cond
 
-             ((< before-begin after-begin)
-              (kill-backward-chars 1))
+               ((< before-begin after-begin)
+                (kill-backward-chars 1))
 
-             ((> before-begin after-begin)
-              (insert " ")))))))))
+               ((> before-begin after-begin)
+                (insert " "))))))))))
 
 
 ; Code transformation
