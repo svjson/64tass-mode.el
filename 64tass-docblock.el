@@ -411,13 +411,20 @@ information from PARSED-LINE."
 (defun 64tass-docblock--section-at-line (&optional line block)
   "Find the docblock section at LINE.
 
-Optionally pass a pre-parsed BLOCK."
+Optionally pass a pre-parsed BLOCK to avoid excessive re-parsing.
+If not provided, the block will be parsed from the block at point, if any.
+
+This function considers a divider line to be part of its preceding content
+block.
+
+The divider line that opens a docblock is not considered to be part of any
+section and nil for input where `line` corresponds to this line."
   (save-excursion
     (when line
       (64tass--goto-line line))
     (let* ((block (or block (64tass-docblock--parse-docblock)))
            (current-section nil))
-      (when block
+      (when (and block (> (line-number-at-pos) (car (plist-get block :bounds))))
         (while (and (null current-section)
                     (>= (line-number-at-pos) (car (plist-get block :bounds))))
           (when-let ((section (cl-find-if
