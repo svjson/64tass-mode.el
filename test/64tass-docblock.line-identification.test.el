@@ -98,6 +98,7 @@
    (forward-line 1)
    (should-not (64tass-docblock--is-divider-line))))
 
+
 
 ;; 64tass-docblock--is-docblock-line
 

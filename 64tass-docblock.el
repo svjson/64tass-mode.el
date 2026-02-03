@@ -498,7 +498,17 @@ Valid values for POSITION are:
   (64tass-docblock--goto-next-section -1))
 
 (defun 64tass-docblock--newline ()
-  "Contextually handle newline command on docblock lines."
+  "Contextually handle newline command on docblock lines.
+
+When point is on docblock line containing doc content, a new content
+line is created within the same content section, pushing any content
+on the right hand side of point to that new line.
+
+When point is on a divider line, point moves to content start of
+the following section.
+
+When point is at the beginning of the line of the first divider line,
+the entire docblock is pushed down one line (regular newline behavior)."
   (cond
    ((64tass-docblock--is-content-line)
     (let* ((line-content (64tass-docblock--line-content nil t))
@@ -519,6 +529,11 @@ Valid values for POSITION are:
           (64tass-docblock--insert-content nil "" :after-line)
           (forward-line 1)
           (move-to-column 4))))))
+   ((and (= 0 (current-column))
+         (64tass-docblock--is-divider-line)
+         (= (car (64tass-docblock--block-bounds))
+            (line-number-at-pos)))
+    (newline))
    ((64tass-docblock--is-divider-line)
     (64tass-docblock--goto-next-section))))
 
