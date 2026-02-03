@@ -88,23 +88,26 @@ The function never returns collected lines unless the lambda chooses to."
                 (or (and (= direction -1) (= linenum 1))
                     (and (= direction +1) (>= (point) (point-max)))))
                (ret (funcall fn linenum line collected at-boundary)))
+          (when at-boundary
+            (setq done t))
           (cond
            ((or (null ret) (eq ret :stop))
             (setq done t result nil))
            ((eq ret :continue)
             nil)
            ((eq ret :collect)
-            (push (cons linenum line) collected))
+            (let ((to-collect (cons linenum line)))
+              (push to-collect collected)
+              (setq result to-collect)))
            ((and (plistp ret) (plist-member ret :collect))
-            (push (plist-get ret :collect) collected))
+            (push (plist-get ret :collect) collected)
+            (setq result (plist-get ret :collect)))
            (t
-            (setq done t result ret))))
-        (unless done
-          (if (or (and (= direction -1) (= (line-number-at-pos) 1))
-                  (and (= direction +1) (>= (point) (point-max))))
-              (setq done t)
+            (setq done t result ret)))
+          (unless done
             (forward-line direction))))
       result)))
+
 
 
 ;; plist functions
