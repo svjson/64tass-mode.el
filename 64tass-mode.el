@@ -35,6 +35,7 @@
 (require '64tass-docblock)
 (require '64tass-xref)
 (require '64tass-proc)
+(require '64tass-project)
 (require '64tass-mem)
 (require 'vice-emu-proc)
 
@@ -826,16 +827,27 @@ e.g, $01 -> 1 -> %00000001"
 
 ;; Assembly
 
-(defun 64tass-assemble-and-launch ()
-  "Assemble the current buffer and launch the result in VICE."
+(defun 64tass-assemble-and-launch (absolute-file-name)
+  "Assemble the file ABSOLUTE-FILE-NAME and launch the result in VICE."
   (interactive)
-  (let* ((assembly-output (64tass-assemble-buffer))
+  (let* ((assembly-output (64tass-assemble-file absolute-file-name))
          (error-count (plist-get assembly-output :error-count))
          (assembly-success-p (member error-count '(0 nil)))
          (output-file (plist-get assembly-output :output-file)))
     (when assembly-success-p
       (message "Launching '%s'..." output-file)
       (vice-emu--launch-file output-file))))
+
+(defun 64tass-assemble-and-launch-buffer ()
+  "Assemble the current buffer and launch the result in VICE."
+  (interactive)
+  (64tass-assemble-and-launch buffer-file-name))
+
+(defun 64tass-assemble-and-launch-project ()
+  "Assemble the current buffer and launch the result in VICE."
+  (interactive)
+  (64tass-assemble-and-launch (64tass-project-entry-file (64tass-resolve-project))))
+
 
 (defun 64tass--on-assembly-success (assembly-output)
   "Show assembly success message according to ASSEMBLY-OUTPUT.
@@ -923,10 +935,21 @@ marks and potentially destroys buffer contents."
                              (plist-get entry :linum)))
               collect (cons label pos)))))
 
+(defun 64tass-assemble-project ()
+  "Assemble the project associated with the current buffer.
+
+This is uses the buffer-local function variable `64tass-project-resolver' or
+the custom variable `64tass-default-project-resolver' if not set to resolve
+the entry-file of the logical project associated with the current buffer."
+  (interactive)
+  (64tass-assemble-file (64tass-project-entry-file (64tass-resolve-project))))
+
 (defconst 64tass-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'64tass-assemble-buffer)
-    (define-key map (kbd "C-c C-e") #'64tass-assemble-and-launch)
+    (define-key map (kbd "C-c C-c") #'64tass-assemble-project)
+    (define-key map (kbd "C-c C-e") #'64tass-assemble-and-launch-project)
+    (define-key map (kbd "C-c b C-c") #'64tass-assemble-buffer)
+    (define-key map (kbd "C-c b C-e") #'64tass-assemble-and-launch-buffer)
     (define-key map (kbd "C-c C-n") #'64tass-cycle-number-at-point)
     (define-key map (kbd "C-c i h") #'64tass-insert-BASIC-header)
     (define-key map (kbd "C-c i b") #'64tass-docblock--insert-contextual)

@@ -14,6 +14,7 @@ Major mode for working with [64tass](https://github.com/irmen/64tass) assembly, 
 - Syntax highlighting/font-locking.
 - Invoking `64tass` for assembly from within Emacs.
 - Assemble-and-launch with `64tass` and VICE (`x64`).
+- Auto-detect entry-point file for assembly/launch.
 - Built in memory map as contextual eldoc (based on https://sta.c64.org/cbm64mem.html )
 
 
@@ -51,10 +52,15 @@ depend on the full 64tass-mode.el major mode.
 
 ### Assembly / Launch
 
-| Binding     | Command                        | Description                                                     |
-|-------------|--------------------------------|-----------------------------------------------------------------|
-| `C-c C-c`   | `64tass-assemble-buffer`       | Invoke `64tass` to assemble the current buffer                  |
-| `C-c C-e`   | `64tass-assemble-and-launch`   | Assemble with `64tass` and launch program in VICE/`x64`         |
+There is no canonical concept of a **project** in `64tass`, but `64tass-mode.el` provides a default implicit concept of a **64tass-project**.
+
+
+| Binding     | Command                              | Description                                                                                                |
+|-------------|--------------------------------------|------------------------------------------------------------------------------------------------------------|
+| `C-c C-c`   | `64tass-assemble-project`            | Invoke `64tass` to assemble the **project** associated with the current buffer                             |
+| `C-c C-e`   | `64tass-assemble-and-launch-project` | Assemble the **project** associated with the current buffer with `64tass` and launch program in VICE/`x64` |
+| `C-c b C-c` | `64tass-assemble-buffer`             | Invoke `64tass` to assemble the **current buffer**                                                         |
+| `C-c b C-e` | `64tass-assemble-and-launch-buffer`  | Assemble the **current buffer** with `64tass` and launch program in VICE/`x64`                             |
 
 
 ## Custom variables
@@ -63,6 +69,7 @@ depend on the full 64tass-mode.el major mode.
 |---------------------------------------|--------|-----------------------------------------------------------------------------------------------------|
 | `64tass-instruction-column-indent`    | `20`   | indent-level for assembly instructions                                                              |
 | `64tass-comment-column-indent`        | `40`   | indent-level for trailing/right-margin comments                                                     |
+| `64tass-default-project-resolver`     | \<fn>  | Default function to use for resolving the **project** associated with the current buffer            |
 | `64tass-on-assembly-success-function` | \<fn>  | Callback to invoke upon successful assembly. Defaults to `64tass--on-assembly-success`.             |
 | `64tass-on-assembly-error-function`   | \<fn>  | Callback to invoke upon assembly error. Defaults to `64tass--on-assembly-error`.                    |
 | `64tass-label-format-function`        | \<fn>  | Determines label-style/format based on context. Defaults to `64tass-default-label-format-function`. |
