@@ -24,14 +24,13 @@ Returns a cons cell of the exit code and the console output.
 1 `include-proc-args` - boolean - prepend default arguments when non-nil  
 2 `append-to-log` - boolean/string - non-nil appends to log buffer, string overrides buffer name  
 
+### `64tass-assemble-file`
 
-### `64tass-assemble-buffer`
-
-Invokes the `64tass` binary to assemble the current buffer and write the output to a file.
+Invokes the `64tass` binary to assemble the provided file name and write the output to a file.
 By default, the output file will have the same name as the source file but with the file
 extension replaced with `.prg`.
 
-The invocation behavior can be controller with the local variables `64tass-proc-output-file`
+The invocation behavior can be controlled with the local variables `64tass-proc-output-file`
 and `64tass-proc-args`. The custom variable `64tass-proc-output-file-extension` can be 
 customized or shadowed to control the file-extension of the assembled output.
 
@@ -90,6 +89,11 @@ console output of the 64tass assembly operation into a structured plist format.
             (:type :passes
              :n 2)))
 ```
+
+### `64tass-assemble-buffer`
+
+Essentially identical to `64tass-assemble-file` but targets the file name of the current buffer.
+
 
 ### `64tass-dump-labels`
 

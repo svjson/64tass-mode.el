@@ -251,9 +251,17 @@ be used for the buffer name, otherwise the default log buffer name defined by
 Uses `64tass-proc-output-file` and `64tass-proc-args` to determine the
 file name of the output."
   (interactive)
-  (let* ((output-file (64tass-proc-output-filename buffer-file-name))
+  (64tass-assemble-file (buffer-file-name)))
+
+;;;###autoload
+(defun 64tass-assemble-file (absolute-file-name)
+  "Send the file ABSOLUTE-FILE-NAME to 64tass for assembly.
+
+Uses `64tass-proc-output-file` and `64tass-proc-args` to determine the
+file name of the output."
+  (let* ((output-file (64tass-proc-output-filename absolute-file-name))
          (exec-result (64tass-exec
-                       (list buffer-file-name "-o" output-file)
+                       (list absolute-file-name "-o" output-file)
                        t t))
          (console-output (cdr exec-result)))
     (let ((exit-code (car exec-result))
@@ -273,12 +281,12 @@ file name of the output."
          (tmp-dir (make-temp-file "64tass-labels-" t))
          (label-file (expand-file-name "labels.out" tmp-dir))
          (result (64tass-exec
-                    (list source-buffer-file
-                          "--no-output"
-                          "--dump-labels"
-                          "-l"
-                          label-file)
-                    t nil))
+                  (list source-buffer-file
+                        "--no-output"
+                        "--dump-labels"
+                        "-l"
+                        label-file)
+                  t nil))
          (label-index (when (zerop (car result)) (64tass--parse-label-dump-file label-file))))
     (delete-directory tmp-dir t)
     label-index))
