@@ -275,13 +275,15 @@ file name of the output."
       assembly-output)))
 
 ;;;###autoload
-(defun 64tass-dump-labels ()
-  "Invoke 64tass to dump labels for the source in the current buffer."
-  (let* ((source-buffer-file buffer-file-name)
+(defun 64tass-dump-labels (&optional file)
+  "Invoke 64tass to dump and read labels for the source in FILE.
+
+If FILE is nil labels will be dumped for the current buffer file."
+  (let* ((source-file (or file (buffer-file-name)))
          (tmp-dir (make-temp-file "64tass-labels-" t))
          (label-file (expand-file-name "labels.out" tmp-dir))
          (result (64tass-exec
-                  (list source-buffer-file
+                  (list source-file
                         "--no-output"
                         "--dump-labels"
                         "-l"
