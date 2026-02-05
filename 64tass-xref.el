@@ -28,6 +28,7 @@
 (require 'xref)
 (require '64tass-parse)
 (require '64tass-proc)
+(require '64tass-project)
 
 
 
@@ -71,10 +72,10 @@ handler in this a list in order for it to be pollable."
 
 Returns all identifiers for a nil value of IDENTIFIER, otherwise the matching
 entry, if any."
-  (when-let ((entries (64tass-dump-labels)))
+  (when-let ((entries (64tass-dump-labels (64tass-project-entry-file (64tass-resolve-project)))))
     (if identifier
         (when-let ((entry (alist-get identifier entries nil nil #'string-equal)))
-          (list entry))
+          (list (cons identifier  entry)))
       entries)))
 
 
