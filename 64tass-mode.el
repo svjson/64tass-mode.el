@@ -980,7 +980,10 @@ the entry-file of the logical project associated with the current buffer."
 
   (when (featurep 'flycheck)
     (declare-function flycheck-64tass-setup 'flycheck-64tass)
-    (flycheck-64tass-setup)))
+    (flycheck-64tass-setup (lambda () (let ((project (64tass-resolve-project)))
+                                        (list :root (64tass-project-root project)
+                                              :entry-file (64tass-project-entry-file project)
+                                              :files (64tass-project-files project)))))))
 
 
 (provide '64tass-mode)
